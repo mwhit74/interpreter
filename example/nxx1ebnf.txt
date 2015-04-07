@@ -1,0 +1,33 @@
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+nxx1 is a simple programming language that provides:
+ numbers
+ strings
+ assignment statements
+ string concatenation
+ simple arithmetic operations
+ print capability
+ 
+comments may be enclosed in slash+asterisk .. asterisk+slash
+
+EXAMPLE PROGRAM
+alpha = 16
+beta = 2   /* note that we use greek letter names for variables} */
+resultName = "delta"
+delta = alpha / beta
+print "Value of " || resultName || " is: "
+print delta
+print "\n"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/ 
+program = statement {statement} EOF.
+
+statement = printStatement | assignmentStatement .
+assignmentStatement = variable "=" expression ";".
+printStatement      = "print" expression ";".
+
+expression = stringExpression | numberExpression.
+
+/* "||" is the concatenation operator, as in PL/I */
+stringExpression =  (stringLiteral | variable) {"||"            stringExpression}.
+numberExpression =  (numberLiteral | variable) { numberOperator numberExpression}.
+numberOperator = "+" | "-" | "/" | "*" .
+ 

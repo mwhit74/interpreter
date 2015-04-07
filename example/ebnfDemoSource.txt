@@ -1,0 +1,26 @@
+/* an EBNF defintion for Ferg's simplified EBNF: EBNF2
+
+In EBNF2, "<expression>" indicates one or more iterations of "expression".
+
+The tokenizer/lexer will tokenize according to these rules:
+     identifier =  letter ( letter | digit | "_" ).
+     terminal   = '"'  any_character* '"' | "'"  any_character* "'".
+*/
+
+language = "language"  "=" sequence "." {sequence} EOF.
+
+rule =  nonterminal  "=" sequence "."  .
+
+sequence =  terminal           {more_stuff}
+		|	nonterminal       {more_stuff}
+		|	enclosed_sequence  {more_stuff}
+		.
+
+more_stuff =  "|" sequence | sequence .
+
+enclosed_sequence =
+		 | "("  <sequence>  ")"   /* exactly one */
+		 | "["  <sequence>  "]"   /* zero or one */
+		 | "{"  <sequence>  "}"   /* zero to n   */
+		 | "<"  <sequence>  ">"   /* one  to n   */
+		 .
