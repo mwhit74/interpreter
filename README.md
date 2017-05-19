@@ -1,7 +1,9 @@
 ---disclaimer---
+
 I am not sure if this is so much a readme as it is notes, thoughts, and a place
 to store research. I may in the future start a project wiki to house all this
-stuff but for now this is my quick and dirty solution
+stuff but for now this is my quick and dirty solution.
+
 ---disclaimer---
 
 This is an ongoing project to help me learn how to write an interperter. This is
@@ -36,8 +38,13 @@ break the input file apart which is inherently not a flexible solution. You are
 hard-coding keywords into the program, generally not a good solution. 
 
 Links:
+
 http://compilers.iecc.com/crenshaw/tutor2.txt
+
 http://forums.devshed.com/programming-languages-139/interpreter-compiler-312483.html#post1342279
+
 http://www.i-programmer.info/bookreviews/20-theory/35-a-concise-introduction-to-languages-and-machines.html
+
 https://learnpythonthehardway.org/book/ex48.html
+
 http://parsingintro.sourceforge.net/
