@@ -48,3 +48,5 @@ http://www.i-programmer.info/bookreviews/20-theory/35-a-concise-introduction-to-
 https://learnpythonthehardway.org/book/ex48.html
 
 http://parsingintro.sourceforge.net/
+
+https://ruslanspivak.com/lsbasi-part1/
