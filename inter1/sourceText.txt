@@ -1,0 +1,19 @@
+/* PROGRAM NAME: nxx1.txt
+
+nxx is a simple programming language that provides:
+ numbers
+ strings
+ assignment statements
+ string concatenation
+ simple arithmetic operations
+ print capability
+ 
+comments may be enclosed in slash+asterisk .. asterisk+slash
+*/
+alpha = 16 ;
+beta = 2   ;
+resultName = "delta" ;
+delta = alpha / beta ;
+print "Value of " || resultName || " is: " ;
+print delta ;
+print "\n" ;
