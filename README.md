@@ -25,8 +25,8 @@ How do you offer that control? Basically provide them an API of commands to run
 the program as they see fit. You can build in functions and tools that offer an 
 expedited way to set up the model/geometry/analysis but it is up to the user to
 use that function or tool. You also have to provide them a guide about what has
-to be defined and when for the program to run properly, e.g. you can call
-function bar without first defining parameter foo. 
+to be defined and in what order for the program to run properly, e.g. you can't 
+call function bar without first defining parameter foo. 
 
 I have considered writing a text parser with regex but I think that there will
 be some limitations. I may come back to this idea because I think there has to
