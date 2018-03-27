@@ -100,46 +100,26 @@ class Interpreter(object):
         else:
             self.error()
 
+    def term(self):
+        token = self.current_token
+        self.check_type(INTEGER)
+        return token.value
+
     def expr(self):
         """expr -> INTEGER PLUS INTEGER
            expr -> INTEGER MINUS INTEGER"""
         #set current token to first token taken from the input
         self.current_token = self.get_next_token()
 
-        #we expect the current token to be a single-digit integer
-        left = self.current_token
-        self.check_type(INTEGER)
-
-        #we expect the current token to be a '+' token
-        op = self.current_token
-        if op.type == PLUS:
-            self.check_type(PLUS)
-        elif op.type == MINUS:
-            self.check_type(MINUS)
-        elif op.type == MULTI:
-            self.check_type(MULTI)
-        elif op.type == DIV:
-            self.check_type(DIV)
-
-        #we expect the current token to be a single-digit
-        right = self.current_token
-        self.check_type(INTEGER)
-
-        #after the above call the self.current_token is set to
-        #EOF token
-
-        #at this point INTEGER PLUS INTEGER sequence of tokens has
-        #been successfully found and the method can just return
-        #the result of adding two integers, thus effectively
-        #interpreting client input
-        if op.type == PLUS:
-            result = left.value + right.value
-        elif op.type == MINUS:
-            result = left.value - right.value
-        elif op.type == MULTI:
-            result = left.value * right.value
-        elif op.type == DIV:
-            result = left.value / right.value
+        result = self.term()
+        while self.current_token.type in (PLUS, MINUS):
+            token = self.current_token
+            if token.type == PLUS:
+                self.check_type(PLUS)
+                result = result + self.term()
+            elif token.type == MINUS:
+                self.check_type(MINUS)
+                result = result - self.term()
 
         return result
 
