@@ -1,3 +1,4 @@
+import pdb
 
 INTEGER = "INTEGER"
 PLUS = "PLUS"
@@ -26,16 +27,19 @@ class Lexer(object):
         self.pos = 0
         self.cur_char = self.text[self.pos]
 
+    def error(self):
+        raise Exception("Invalid syntax.")
+
     def whitespace(self):
-        while self.cur_char is not EOF and self.cur_char.isspace():
+        while self.cur_char is not None and self.cur_char.isspace():
             self.get_next_char()
 
     def integer(self):
         value = ""
-        while self.cur_char is not EOF and self.cur_char.isdigit():
+        while self.cur_char is not None and self.cur_char.isdigit():
             value += self.cur_char
             self.get_next_char()
-        return value
+        return int(value)
 
     def get_next_char(self):
         self.pos += 1
@@ -95,7 +99,7 @@ class Interpreter(object):
 
     def expr1(self):
         result = self.expr2()
-        while self.cur_token.type not in (MUL, DIV, EOF):
+        while self.cur_token.type in (PLUS, MINUS):
             if self.cur_token.type is PLUS:
                 self.check_type(PLUS)
                 result += self.expr2()
@@ -107,7 +111,7 @@ class Interpreter(object):
 
     def expr2(self):
         result = self.factor()
-        while self.cur_token.type is not EOF:
+        while self.cur_token.type in (MUL, DIV):
             if self.cur_token.type is MUL:
                 self.check_type(MUL)
                 result = result * self.factor()
@@ -116,7 +120,6 @@ class Interpreter(object):
                 result = result / self.factor()
 
         return result
-
 
 def main():
     while True:
