@@ -28,15 +28,15 @@ class Lexer(object):
         self.cur_char = self.text[self.pos]
 
     def whitespace(self):
-        while self.cur_char is not EOF and self.cur_char.isspace():
+        while self.cur_char is not None and self.cur_char.isspace():
             self.get_next_char()
 
     def integer(self):
         value = ""
-        while self.cur_char is not EOF and self.cur_char.isdigit():
+        while self.cur_char is not None and self.cur_char.isdigit():
             value += self.cur_char
             self.get_next_char()
-        return value
+        return int(value)
 
     def get_next_char(self):
         self.pos += 1
@@ -124,26 +124,26 @@ class Interpreter(object):
 
     def expr3(self):
         while self.cur_token.type is not CPAR:
-            result = self.expr2()
+            result = self.expr1()
 
         self.check_type(CPAR)
         return result
 
 def main():
-    while True:
-        try:
-            text = raw_input("calc> ")
-        except EOFError:
-            break
-        if not text:
-            continue
+    #while True:
+    #    try:
+    #        text = raw_input("calc> ")
+    #    except EOFError:
+    #        break
+    #    if not text:
+    #        continue
 
-        lexer = Lexer(text)
-        pdb.set_trace()
-        inte = Interpreter(lexer)
-        pdb.set_trace()
-        result = inte.expr1()
-        print result
+    lexer = Lexer("7 + 3 * (10/(12/(3+1)-1))")
+    pdb.set_trace()
+    inte = Interpreter(lexer)
+    pdb.set_trace()
+    result = inte.expr1()
+    print result
 
 if __name__ == "__main__":
     main()
