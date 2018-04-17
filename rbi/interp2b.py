@@ -93,7 +93,12 @@ class Interpreter(object):
             self.cur_token = self.lexer.get_next_token()
         else:
             self.error()
-
+"""
+    expr1: expr2((PLUS|MINUS)expr2)*
+    expr2: expr3((MUL|DIV)expr3))*
+    expr3: (OPAR(expr1)CPAR)*|factor
+    factor: INTEGER
+"""
     def expr1(self):
         result = self.expr2()
         while self.cur_token.type in (PLUS, MINUS):
@@ -107,26 +112,26 @@ class Interpreter(object):
         return result
 
     def expr2(self):
-        if self.cur_token.type is OPAR:
-            self.check_type(OPAR)
-            result = self.expr3()
-        else:
-            result = self.factor()
+        result = self.expr3()
         while self.cur_token.type in (MUL, DIV):
             if self.cur_token.type is MUL:
                 self.check_type(MUL)
-                result = result * self.factor()
+                result = result * self.expr3()
             elif self.cur_token.type is DIV:
                 self.check_type(DIV)
-                result = result / self.factor()
+                result = result / self.expr3()
 
         return result
 
     def expr3(self):
-        while self.cur_token.type is not CPAR:
-            result = self.expr1()
+        if self.cur_token.type is INTEGER:
+            result = self.factor()
+        elif self.cur_token.type is OPAR:
+            self.check_type(OPAR)
+            while self.cur_token.type is not CPAR:
+                result = self.expr1()
 
-        self.check_type(CPAR)
+            self.check_type(CPAR)
         return result
 
 def main():
@@ -139,9 +144,9 @@ def main():
     #        continue
 
     lexer = Lexer("7 + 3 * (10/(12/(3+1)-1))")
-    pdb.set_trace()
+    #pdb.set_trace()
     inte = Interpreter(lexer)
-    pdb.set_trace()
+    #pdb.set_trace()
     result = inte.expr1()
     print result
 
