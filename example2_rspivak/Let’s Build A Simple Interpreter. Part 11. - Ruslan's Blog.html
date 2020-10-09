@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part&nbsp;11. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part11/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="I was sitting in my room the other day and thinking about how much we had covered, and I thought I would recap what we’ve learned so far and what lies ahead of&nbsp;us. Up until now we’ve&nbsp;learned: How to break sentences into tokens. The process is …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part&nbsp;11.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part11/">
+        <meta property="og:description" content="I was sitting in my room the other day and thinking about how much we had covered, and I thought I would recap what we’ve learned so far and what lies ahead of&nbsp;us. Up until now we’ve&nbsp;learned: How to break sentences into tokens. The process is …">
+        <meta property="article:published_time" content="2016-09-20">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/a_data/lounge_002.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part11/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part&nbsp;11.">
+                        Let’s Build A Simple Interpreter. Part&nbsp;11.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-09-20T21:15:00-04:00"> Tue, September 20, 2016</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <p>I was sitting in my room the other day and 
+thinking about how much we had covered, and I thought I would recap what
+ we’ve learned so far and what lies ahead of&nbsp;us.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_recap.png" width="700"></p>
+<p>Up until now we’ve&nbsp;learned:</p>
+<ul>
+<li>How to break sentences into tokens. The process is called <em><strong>lexical analysis</strong></em> and the part of the interpreter that does it is called a <em><strong>lexical analyzer</strong></em>, <em><strong>lexer</strong></em>, <em><strong>scanner</strong></em>, or <em><strong>tokenizer</strong></em>. We’ve learned how to write our own <em><strong>lexer</strong></em> from the ground up without using regular expressions or any other tools like <a href="https://en.wikipedia.org/wiki/Lex_(software)">Lex</a>.</li>
+<li>How to recognize a phrase in the stream of tokens. The process of 
+recognizing a phrase in the stream of tokens or, to put it differently, 
+the process of finding structure in the stream of tokens is called <em><strong>parsing</strong></em> or <em><strong>syntax analysis</strong></em>. The part of an interpreter or compiler that performs that job is called a <em><strong>parser</strong></em> or <em><strong>syntax analyzer</strong></em>.</li>
+<li>How to represent a programming language’s syntax rules with <em><strong>syntax diagrams</strong></em>, which are a graphical representation of a programming language’s syntax rules.  <em><strong>Syntax diagrams</strong></em> visually show us which statements are allowed in our programming language and which are&nbsp;not.</li>
+<li>How to use another widely used notation for specifying the syntax of a programming language. It’s called <em><strong>context-free grammars</strong></em> (<em><strong>grammars</strong></em>, for short) or <em><strong><span class="caps">BNF</span></strong></em> (Backus-Naur&nbsp;Form).</li>
+<li>How to map a <em><strong>grammar</strong></em> to code and how to write a <em><strong>recursive-descent parser</strong></em>.</li>
+<li>How to write a really basic <em><strong>interpreter</strong></em>.</li>
+<li>How <em><strong>associativity</strong></em> and <em><strong>precedence</strong></em> of operators work and how to construct a grammar using a precedence&nbsp;table.</li>
+<li>How to build an <em><strong>Abstract Syntax Tree</strong></em> (<span class="caps">AST</span>) of a parsed sentence and how to represent the whole source program in Pascal as one big <em><strong><span class="caps">AST</span></strong></em>.</li>
+<li>How to walk an <span class="caps">AST</span> and how to implement our interpreter as an <span class="caps">AST</span> node&nbsp;visitor.</li>
+</ul>
+<p>With all that knowledge and experience under our belt, we’ve built an interpreter that can scan, parse, and build an <span class="caps">AST</span> and interpret, by walking the <span class="caps">AST</span>,
+ our very first complete Pascal program. Ladies and gentlemen, I 
+honestly think if you’ve reached this far, you deserve a pat on the 
+back. But don’t let it go to your head. Keep going. Even though we’ve 
+covered a lot of ground, there are even more exciting parts coming 
+our&nbsp;way.</p>
+<p><br></p>
+<p>With everything we’ve covered so far, we are almost ready to tackle topics&nbsp;like:</p>
+<ul>
+<li>Nested procedures and&nbsp;functions</li>
+<li>Procedure and function&nbsp;calls</li>
+<li>Semantic analysis (type checking, making sure variables are declared
+ before they are used, and basically checking if a program 
+makes&nbsp;sense)</li>
+<li>Control flow elements (like <span class="caps">IF</span>&nbsp;statements)</li>
+<li>Aggregate data types&nbsp;(Records)</li>
+<li>More built-in&nbsp;types</li>
+<li>Source-level&nbsp;debugger</li>
+<li>Miscellanea (All the other goodness not mentioned above&nbsp;:)</li>
+</ul>
+<p>But before we cover those topics, we need to build a solid foundation and&nbsp;infrastructure.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_foundation.png" width="500"></p>
+<p>This is where we start diving deeper into the super important topic 
+of symbols, symbol tables, and scopes. The topic itself will span 
+several articles. It’s that important and you’ll see why. Okay, let’s 
+start building that foundation and infrastructure, then, shall&nbsp;we?</p>
+<p><br>
+First, let’s talk about symbols and why we need to track them.
+What is a <em><strong>symbol</strong></em>? For our purposes, we’ll informally define <em><strong>symbol</strong></em>
+ as an identifier of some program entity like a variable, subroutine, or
+ built-in type. For symbols to be useful they need to have at least the 
+following information about the program entities they&nbsp;identify:</p>
+<ul>
+<li>Name (for example, ‘x’, ‘y’,&nbsp;‘number’)</li>
+<li>Category (Is it a variable, subroutine, or built-in&nbsp;type?)</li>
+<li>Type (<span class="caps">INTEGER</span>, <span class="caps">REAL</span>)</li>
+</ul>
+<p>Today we’ll tackle variable symbols and built-in type symbols because
+ we’ve already used variables and types before. By the way, the 
+“built-in” type just means a type that hasn’t been defined by you and is
+ available for you right out of the box, like <span class="caps">INTEGER</span> and <span class="caps">REAL</span> types that you’ve seen and used&nbsp;before.</p>
+<p>Let’s take a look at the following Pascal program, specifically at 
+the variable declaration part. You can see in the picture below that 
+there are four symbols in that section: two variable symbols (<em>x</em> and <em>y</em>) and two built-in type symbols (<em><span class="caps">INTEGER</span></em> and <em><span class="caps">REAL</span></em>).</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_prog_symbols.png" width="640"></p>
+<p>How can we represent symbols in code? Let’s create a base <em>Symbol</em> class in&nbsp;Python:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Symbol</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+</pre></div>
+
+
+<p>As you can see, the class takes the <em>name</em> parameter and an optional <em>type</em>
+ parameter (not all symbols may have a type associated with them). What 
+about the category of a symbol? We’ll encode the category of a symbol in
+ the class name itself, which means we’ll create separate classes to 
+represent different symbol&nbsp;categories.</p>
+<p>Let’s start with basic built-in types. We’ve seen two built-in types so far, when we declared variables: <span class="caps">INTEGER</span> and <span class="caps">REAL</span>. How do we represent a built-in type symbol in code? Here is one&nbsp;option:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">BuiltinTypeSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+</pre></div>
+
+
+<p>The class inherits from the <em>Symbol</em> class and the constructor requires only a name of the type. The category is encoded in the class name, and the <em>type</em> parameter from the base class for a built-in type symbol is <em>None</em>. The double underscore or <em>dunder</em> (as in “Double UNDERscore”) methods <em>__str__</em> and <em>__repr__</em> are special Python methods and we’ve defined them to have a nice formatted message when you print a symbol&nbsp;object.</p>
+<p>Download the <a href="https://github.com/rspivak/lsbasi/blob/master/part11/python/spi.py">interpreter file</a> and save it as <em>spi.py</em>;
+ launch a python shell from the same directory where you saved the 
+spi.py file, and play with the class we’ve just 
+defined&nbsp;interactively:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import BuiltinTypeSymbol
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'INTEGER'</span><span class="o">)</span>
+&gt;&gt;&gt; int_type
+INTEGER
+&gt;&gt;&gt; <span class="nv">real_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'REAL'</span><span class="o">)</span>
+&gt;&gt;&gt; real_type
+REAL
+</pre></div>
+
+
+<p><br>
+How can we represent a variable symbol? Let’s create a <em>VarSymbol</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">VarSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">'&lt;{name}:{type}&gt;'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+</pre></div>
+
+
+<p>In the class we made both the <em>name</em> and the <em>type</em> parameters required parameters and the class name <em>VarSymbol</em> clearly indicates that an instance of the class will identify a variable symbol (the category is <em>variable</em>.)</p>
+<p>Back to the interactive python shell to see how we can manually 
+construct instances for our variable symbols now that we know how to 
+construct <em>BuiltinTypeSymbol</em> class&nbsp;instances:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import BuiltinTypeSymbol, VarSymbol
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'INTEGER'</span><span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">real_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'REAL'</span><span class="o">)</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">var_x_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'x'</span>, int_type<span class="o">)</span>
+&gt;&gt;&gt; var_x_symbol
+&lt;x:INTEGER&gt;
+&gt;&gt;&gt; <span class="nv">var_y_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'y'</span>, real_type<span class="o">)</span>
+&gt;&gt;&gt; var_y_symbol
+&lt;y:REAL&gt;
+</pre></div>
+
+
+<p>As you can see, we first create an instance of a built-in type symbol and then pass it as a parameter to <em>VarSymbol</em>‘s&nbsp;constructor.</p>
+<p>Here is the hierarchy of symbols we’ve defined in visual&nbsp;form:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_symbol_hierarchy.png" width="500"></p>
+<p>So far so good, but we haven’t answered the question yet as to why we even need to track those symbols in the first&nbsp;place.</p>
+<p>Here are some of the&nbsp;reasons:</p>
+<ul>
+<li>To make sure that when we assign a value to a variable the types are correct (type&nbsp;checking)</li>
+<li>To make sure that a variable is declared before it is&nbsp;used</li>
+</ul>
+<p>Take a look at the following incorrect Pascal program, for&nbsp;example:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_symtracking.png" width="640"></p>
+<p>There are two problems with the program above (you can compile it with <a href="http://www.freepascal.org/"><em>fpc</em></a> to see it for&nbsp;yourself):</p>
+<ol>
+<li>In the expression <em>“x := 2 + y;”</em> we assigned a decimal value
+ to the variable “x” that was declared as integer. That wouldn’t compile
+ because the types are&nbsp;incompatible.</li>
+<li>In the assignment statement <em>“x := a;”</em> we referenced the variable “a” that wasn’t declared -&nbsp;wrong!</li>
+</ol>
+<p>To be able to identify cases like that even before 
+interpreting/evaluating the source code of the program at run-time, we 
+need to track program symbols. And where do we store the symbols that we
+ track? I think you’ve guessed it right - in the symbol&nbsp;table!</p>
+<p><br>
+What is a <em><strong>symbol table</strong></em>? A <em><strong>symbol table</strong></em> is an abstract data type (<em><strong><span class="caps">ADT</span></strong></em>)
+ for tracking various symbols in source code. Today we’re going to 
+implement our symbol table as a separate class with some 
+helper&nbsp;methods:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'Symbols: {symbols}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">symbols</span><span class="o">=</span><span class="p">[</span><span class="n">value</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">define</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Define: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+
+    <span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># 'symbol' is either an instance of the Symbol class or 'None'</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p>There are two main operations that we will be performing with the 
+symbol table: storing symbols and looking them up by name: hence, we 
+need two helper methods - <em>define</em> and <em>lookup</em>.</p>
+<p>The method <em>define</em> takes a symbol as a parameter and stores it internally in its <em>_symbols</em> ordered dictionary using the symbol’s name as a key and the symbol instance as a value. The method <em>lookup</em> takes a symbol name as a parameter and returns a symbol if it finds it or “None” if it&nbsp;doesn’t.</p>
+<p>Let’s manually populate our symbol table for the same Pascal program 
+we’ve used just recently where we were manually creating variable and 
+built-in type&nbsp;symbols:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part11</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">x</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">y</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+
+<span class="k">BEGIN</span>
+
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Launch a Python shell again and follow&nbsp;along:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import SymbolTable, BuiltinTypeSymbol, VarSymbol
+&gt;&gt;&gt; <span class="nv">symtab</span> <span class="o">=</span> SymbolTable<span class="o">()</span>
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'INTEGER'</span><span class="o">)</span>
+&gt;&gt;&gt; symtab.define<span class="o">(</span>int_type<span class="o">)</span>
+Define: INTEGER
+&gt;&gt;&gt; symtab
+Symbols: <span class="o">[</span>INTEGER<span class="o">]</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">var_x_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'x'</span>, int_type<span class="o">)</span>
+&gt;&gt;&gt; symtab.define<span class="o">(</span>var_x_symbol<span class="o">)</span>
+Define: &lt;x:INTEGER&gt;
+&gt;&gt;&gt; symtab
+Symbols: <span class="o">[</span>INTEGER, &lt;x:INTEGER&gt;<span class="o">]</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">real_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'REAL'</span><span class="o">)</span>
+&gt;&gt;&gt; symtab.define<span class="o">(</span>real_type<span class="o">)</span>
+Define: REAL
+&gt;&gt;&gt; symtab
+Symbols: <span class="o">[</span>INTEGER, &lt;x:INTEGER&gt;, REAL<span class="o">]</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">var_y_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'y'</span>, real_type<span class="o">)</span>
+&gt;&gt;&gt; symtab.define<span class="o">(</span>var_y_symbol<span class="o">)</span>
+Define: &lt;y:REAL&gt;
+&gt;&gt;&gt; symtab
+Symbols: <span class="o">[</span>INTEGER, &lt;x:INTEGER&gt;, REAL, &lt;y:REAL&gt;<span class="o">]</span>
+</pre></div>
+
+
+<p><br>
+If you looked at the contents of the <em>_symbols</em> dictionary it would look something like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_symtab.png" width="360"></p>
+<p>How do we automate the process of building the symbol table? We’ll just write another node visitor that walks the <span class="caps">AST</span> built by our parser! This is another example of how useful it is to have an intermediary form like <span class="caps">AST</span>.
+ Instead of extending our parser to deal with the symbol table, we 
+separate concerns and write a new node visitor class. Nice and 
+clean.&nbsp;:)</p>
+<p>Before doing that, though, let’s extend our <em>SymbolTable</em> class to initialize the built-in types when the symbol table instance is created. Here is the full source code for today’s <em>SymbolTable</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_builtins</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_init_builtins</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'REAL'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'Symbols: {symbols}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">symbols</span><span class="o">=</span><span class="p">[</span><span class="n">value</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">define</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Define: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+
+    <span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># 'symbol' is either an instance of the Symbol class or 'None'</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p><br>
+Now onto the <em>SymbolTableBuilder</em> <span class="caps">AST</span> node&nbsp;visitor:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SymbolTableBuilder</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span> <span class="o">=</span> <span class="n">SymbolTable</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">visit_Block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">declaration</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">declarations</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">declaration</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">compound_statement</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_BinOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_Num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">visit_UnaryOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_Compound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_NoOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+        <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+You’ve seen most of those methods before in the <em>Interpreter</em> class, but the <em>visit_VarDecl</em> method deserves some special attention. Here it is&nbsp;again:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p>This method is responsible for visiting (walking) a <em>VarDecl</em> <span class="caps">AST</span>
+ node and storing the corresponding symbol in the symbol table. First, 
+the method looks up the built-in type symbol by name in the symbol 
+table, then it creates an instance of the <em>VarSymbol</em> class and stores (defines) it in the symbol&nbsp;table.</p>
+<p><br>
+Let’s take our <em>SymbolTableBuilder</em> <span class="caps">AST</span> walker for a test drive and see it in&nbsp;action:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import Lexer, Parser, SymbolTableBuilder
+&gt;&gt;&gt; <span class="nv">text</span> <span class="o">=</span> <span class="s2">"""</span>
+<span class="s2">... PROGRAM Part11;</span>
+<span class="s2">... VAR</span>
+<span class="s2">...    x : INTEGER;</span>
+<span class="s2">...    y : REAL;</span>
+<span class="s2">...</span>
+<span class="s2">... BEGIN</span>
+<span class="s2">...</span>
+<span class="s2">... END.</span>
+<span class="s2">... """</span>
+&gt;&gt;&gt; <span class="nv">lexer</span> <span class="o">=</span> Lexer<span class="o">(</span>text<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">parser</span> <span class="o">=</span> Parser<span class="o">(</span>lexer<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">tree</span> <span class="o">=</span> parser.parse<span class="o">()</span>
+&gt;&gt;&gt; <span class="nv">symtab_builder</span> <span class="o">=</span> SymbolTableBuilder<span class="o">()</span>
+Define: INTEGER
+Define: REAL
+&gt;&gt;&gt; symtab_builder.visit<span class="o">(</span>tree<span class="o">)</span>
+Lookup: INTEGER
+Define: &lt;x:INTEGER&gt;
+Lookup: REAL
+Define: &lt;y:REAL&gt;
+&gt;&gt;&gt; <span class="c1"># Let’s examine the contents of our symbol table</span>
+…
+&gt;&gt;&gt; symtab_builder.symtab
+Symbols: <span class="o">[</span>INTEGER, REAL, &lt;x:INTEGER&gt;, &lt;y:REAL&gt;<span class="o">]</span>
+</pre></div>
+
+
+<p>In the interactive session above, you can see the sequence of 
+“Define: …” and “Lookup: …” messages that indicate the order in which 
+symbols are defined and looked up in the symbol table. The last command 
+in the session prints the contents of the symbol table and you can see 
+that it’s exactly the same as the contents of the symbol table that 
+we’ve built manually before. The magic of <span class="caps">AST</span> node visitors is that they pretty much do all the work for you.&nbsp;:)</p>
+<p><br>
+We can already put our symbol table and symbol table builder to good 
+use: we can use them to verify that variables are declared before they 
+are used in assignments and expressions. All we need to do is just 
+extend the visitor with two more methods: <em>visit_Assign</em> and <em>visit_Var</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">var_symbol</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">var_name</span><span class="p">))</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">var_symbol</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">var_name</span><span class="p">))</span>
+</pre></div>
+
+
+<p>These methods will raise a <em>NameError</em> exception if they cannot find the symbol in the symbol&nbsp;table.</p>
+<p><br>
+Take a look at the following program, where we reference the variable “b” that hasn’t been declared&nbsp;yet:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">NameError1</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">a</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+<span class="k">BEGIN</span>
+   <span class="n">a</span> <span class="o">:=</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">b</span><span class="o">;</span>
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Let’s see what happens if we construct an <span class="caps">AST</span> for the program and pass it to our symbol table builder to&nbsp;visit:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import Lexer, Parser, SymbolTableBuilder
+&gt;&gt;&gt; <span class="nv">text</span> <span class="o">=</span> <span class="s2">"""</span>
+<span class="s2">... PROGRAM NameError1;</span>
+<span class="s2">... VAR</span>
+<span class="s2">...    a : INTEGER;</span>
+<span class="s2">...</span>
+<span class="s2">... BEGIN</span>
+<span class="s2">...    a := 2 + b;</span>
+<span class="s2">... END.</span>
+<span class="s2">... """</span>
+&gt;&gt;&gt; <span class="nv">lexer</span> <span class="o">=</span> Lexer<span class="o">(</span>text<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">parser</span> <span class="o">=</span> Parser<span class="o">(</span>lexer<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">tree</span> <span class="o">=</span> parser.parse<span class="o">()</span>
+&gt;&gt;&gt; <span class="nv">symtab_builder</span> <span class="o">=</span> SymbolTableBuilder<span class="o">()</span>
+Define: INTEGER
+Define: REAL
+&gt;&gt;&gt; symtab_builder.visit<span class="o">(</span>tree<span class="o">)</span>
+Lookup: INTEGER
+Define: &lt;a:INTEGER&gt;
+Lookup: a
+Lookup: b
+Traceback <span class="o">(</span>most recent call last<span class="o">)</span>:
+  ...
+  File <span class="s2">"spi.py"</span>, line <span class="m">674</span>, in visit_Var
+    raise NameError<span class="o">(</span>repr<span class="o">(</span>var_name<span class="o">))</span>
+NameError: <span class="s1">'b'</span>
+</pre></div>
+
+
+<p>Exactly what we were&nbsp;expecting!</p>
+<p><br>
+Here is another error case where we try to assign a value to a variable 
+that hasn’t been defined yet, in this case the variable&nbsp;‘a’:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">NameError2</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">b</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+<span class="k">BEGIN</span>
+   <span class="n">b</span> <span class="o">:=</span> <span class="mi">1</span><span class="o">;</span>
+   <span class="n">a</span> <span class="o">:=</span> <span class="n">b</span> <span class="o">+</span> <span class="mi">2</span><span class="o">;</span>
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Meanwhile, in the Python&nbsp;shell:</p>
+<div class="highlight"><pre><span></span>&gt;&gt;&gt; from spi import Lexer, Parser, SymbolTableBuilder
+&gt;&gt;&gt; <span class="nv">text</span> <span class="o">=</span> <span class="s2">"""</span>
+<span class="s2">... PROGRAM NameError2;</span>
+<span class="s2">... VAR</span>
+<span class="s2">...    b : INTEGER;</span>
+<span class="s2">...</span>
+<span class="s2">... BEGIN</span>
+<span class="s2">...    b := 1;</span>
+<span class="s2">...    a := b + 2;</span>
+<span class="s2">... END.</span>
+<span class="s2">... """</span>
+&gt;&gt;&gt; <span class="nv">lexer</span> <span class="o">=</span> Lexer<span class="o">(</span>text<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">parser</span> <span class="o">=</span> Parser<span class="o">(</span>lexer<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">tree</span> <span class="o">=</span> parser.parse<span class="o">()</span>
+&gt;&gt;&gt; <span class="nv">symtab_builder</span> <span class="o">=</span> SymbolTableBuilder<span class="o">()</span>
+Define: INTEGER
+Define: REAL
+&gt;&gt;&gt; symtab_builder.visit<span class="o">(</span>tree<span class="o">)</span>
+Lookup: INTEGER
+Define: &lt;b:INTEGER&gt;
+Lookup: b
+Lookup: a
+Traceback <span class="o">(</span>most recent call last<span class="o">)</span>:
+  ...
+  File <span class="s2">"spi.py"</span>, line <span class="m">665</span>, in visit_Assign
+    raise NameError<span class="o">(</span>repr<span class="o">(</span>var_name<span class="o">))</span>
+NameError: <span class="s1">'a'</span>
+</pre></div>
+
+
+<p>Great, our new visitor caught this problem&nbsp;too!</p>
+<p>I would like to emphasize the point that all those checks that our <em>SymbolTableBuilder</em> <span class="caps">AST</span>
+ visitor makes are made before the run-time, so before our interpreter 
+actually evaluates the source program. To drive the point home if we 
+were to interpret the following&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part11</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">x</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+<span class="k">BEGIN</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="mi">2</span><span class="o">;</span>
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+<p>The contents of the symbol table and the run-time GLOBAL_MEMORY right
+ before the program exited would look something like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_symtab_vs_globmem.png" width="700"></p>
+<p>Do you see the difference? Can you see that the symbol table doesn’t 
+hold the value 2 for variable “x”? That’s solely the interpreter’s 
+job&nbsp;now.</p>
+<p><br>
+Remember the picture from <a href="https://ruslanspivak.com/lsbasi-part9/">Part 9</a> where the Symbol Table was used as global&nbsp;memory?</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part9_ast_st02.png" width="700"></p>
+<p>No more! We effectively got rid of the hack where symbol table did double duty as global&nbsp;memory.</p>
+<p><br>
+Let’s put it all together and test our new interpreter with the following&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part11</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">number</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">a</span><span class="o">,</span> <span class="n">b</span>   <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">y</span>      <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+
+<span class="k">BEGIN</span> <span class="cm">{Part11}</span>
+   <span class="n">number</span> <span class="o">:=</span> <span class="mi">2</span><span class="o">;</span>
+   <span class="n">a</span> <span class="o">:=</span> <span class="n">number</span> <span class="o">;</span>
+   <span class="n">b</span> <span class="o">:=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">number</span> <span class="k">DIV</span> <span class="mi">4</span><span class="o">;</span>
+   <span class="n">y</span> <span class="o">:=</span> <span class="mi">20</span> <span class="o">/</span> <span class="mi">7</span> <span class="o">+</span> <span class="mf">3.14</span>
+<span class="k">END</span><span class="o">.</span>  <span class="cm">{Part11}</span>
+</pre></div>
+
+
+<p><br>
+Save the program as part11.pas and fire up the&nbsp;interpreter:</p>
+<div class="highlight"><pre><span></span>$ python spi.py part11.pas
+Define: INTEGER
+Define: REAL
+Lookup: INTEGER
+Define: &lt;number:INTEGER&gt;
+Lookup: INTEGER
+Define: &lt;a:INTEGER&gt;
+Lookup: INTEGER
+Define: &lt;b:INTEGER&gt;
+Lookup: REAL
+Define: &lt;y:REAL&gt;
+Lookup: number
+Lookup: a
+Lookup: number
+Lookup: b
+Lookup: a
+Lookup: number
+Lookup: y
+
+Symbol Table contents:
+Symbols: <span class="o">[</span>INTEGER, REAL, &lt;number:INTEGER&gt;, &lt;a:INTEGER&gt;, &lt;b:INTEGER&gt;, &lt;y:REAL&gt;<span class="o">]</span>
+
+Run-time GLOBAL_MEMORY contents:
+<span class="nv">a</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">b</span> <span class="o">=</span> <span class="m">25</span>
+<span class="nv">number</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">y</span> <span class="o">=</span> <span class="m">5</span>.99714285714
+</pre></div>
+
+
+<p><br>
+I’d like to draw your attention again to the fact that the <em>Interpreter</em> class has nothing to do with building the symbol table and it relies on the <em>SymbolTableBuilder</em> to make sure that the variables in the source code are properly declared before they are used by the <em>Interpreter</em>.</p>
+<p><br>
+<strong>Check your&nbsp;understanding</strong></p>
+<ul>
+<li>What is a&nbsp;symbol?</li>
+<li>Why do we need to track&nbsp;symbols?</li>
+<li>What is a symbol&nbsp;table?</li>
+<li>What is the difference between defining a symbol and resolving/looking up the&nbsp;symbol?</li>
+<li>Given the following small Pascal program, what would be the contents
+ of the symbol table, the global memory (the GLOBAL_MEMORY dictionary 
+that is part of the <em>Interpreter</em>)?<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part11</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+<span class="k">BEGIN</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="mi">2</span><span class="o">;</span>
+   <span class="n">y</span> <span class="o">:=</span> <span class="mi">3</span> <span class="o">+</span> <span class="n">x</span><span class="o">;</span>
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+</li>
+</ul>
+<p><br>
+That’s all for today.  In the next article, I’ll talk about scopes and 
+we’ll get our hands dirty with parsing nested procedures. Stay tuned and
+ see you soon!
+And remember that no matter what,  “Keep&nbsp;going!”</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/lsbasi_part11_keep_going.png" width="300"></p>
+<p><br></p>
+<p><span class="caps">P.S.</span> My explanation of the topic of symbols and symbol table management is heavily influenced by the book <em><a href="http://amzn.to/2cHsHT1">Language Implementation Patterns</a></em>
+ by Terence Parr. It’s a terrific book. I think it has the clearest 
+explanation of the topic I’ve ever seen and it also covers class scopes,
+ a subject that I’m not going to cover in the series because we will not
+ be discussing object-oriented&nbsp;Pascal.</p>
+<p><span class="caps">P.P.</span>S.: If you can’t wait and want to start
+ digging into compilers, I highly recommend the freely available classic
+ by Jack Crenshaw <a href="http://compilers.iecc.com/crenshaw/">“Let’s Build a&nbsp;Compiler.”</a></p>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app8072" name="dsq-app8072" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/a.html" style="height: 3141px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-11';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part11/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A011.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>

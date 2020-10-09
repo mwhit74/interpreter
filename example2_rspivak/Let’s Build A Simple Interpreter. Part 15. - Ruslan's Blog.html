@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part&nbsp;15. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part15/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="“I am a slow walker, but I never walk back.” — Abraham&nbsp;Lincoln And we’re back to our regularly scheduled programming!&nbsp;:) Before moving on to topics of recognizing and interpreting procedure calls, let’s make some changes to improve our error reporting a bit. Up until now, if there was …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part&nbsp;15.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part15/">
+        <meta property="og:description" content="“I am a slow walker, but I never walk back.” — Abraham&nbsp;Lincoln And we’re back to our regularly scheduled programming!&nbsp;:) Before moving on to topics of recognizing and interpreting procedure calls, let’s make some changes to improve our error reporting a bit. Up until now, if there was …">
+        <meta property="article:published_time" content="2019-06-21">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/embed.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/a_data/lounge_002.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/count.js"></script><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part15/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part&nbsp;15.">
+                        Let’s Build A Simple Interpreter. Part&nbsp;15.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2019-06-21T05:45:00-04:00"> Fri, June 21, 2019</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <blockquote>
+<p><em><span class="dquo">“</span>I am a slow walker, but I never walk back.” — Abraham&nbsp;Lincoln</em></p>
+</blockquote>
+<p>And we’re back to our regularly scheduled programming!&nbsp;:)</p>
+<p>Before moving on to topics of recognizing and interpreting procedure 
+calls, let’s make some changes to improve our error reporting a bit. Up 
+until now, if there was a problem getting a new token from text, parsing
+ source code, or doing semantic analysis, a stack trace would be thrown 
+right into your face with a very generic message. We can do better 
+than&nbsp;that.</p>
+<p>To provide better error messages pinpointing where in the code an 
+issue happened, we need to add some features to our interpreter. Let’s 
+do that and make some other changes along the way. This will make the 
+interpreter more user friendly and give us an opportunity to flex our 
+muscles after a “short” break in the series. It will also give us a 
+chance to prepare for new features that we will be adding in 
+future&nbsp;articles.</p>
+<p>Goals for&nbsp;today:</p>
+<ul>
+<li>Improve error reporting in the lexer, parser, and semantic analyzer. Instead of stack traces with very generic messages like <em>“Invalid syntax”</em>, we would like to see something more useful like <em>“SyntaxError: Unexpected token -&gt; Token(TokenType.<span class="caps">SEMI</span>, ‘;’,&nbsp;position=23:13)”</em></li>
+<li>Add a “—scope” command line option to turn scope output&nbsp;on/off</li>
+<li>Switch to Python 3. From here on out, all code will be tested on Python 3.7+&nbsp;only</li>
+</ul>
+<p>Let’s get cracking and start flexing our coding muscles by changing our lexer&nbsp;first.</p>
+<p><br>
+Here is a list of the changes we are going to make in our lexer&nbsp;today:</p>
+<ol>
+<li>We will add error codes and custom exceptions: <em>LexerError</em>, <em>ParserError</em>, and <em>SemanticError</em></li>
+<li>We will add new members to the <em>Lexer</em> class to help to track tokens’ positions: <em>lineno</em> and <em>column</em></li>
+<li>We will modify the <em>advance</em> method to update the lexer’s <em>lineno</em> and <em>column</em>&nbsp;variables</li>
+<li>We will update the <em>error</em> method to raise a <em>LexerError</em> exception with information about the current line and&nbsp;column</li>
+<li>We will define token types in the <em>TokenType</em> enumeration class (Support for enumerations was added in Python&nbsp;3.4)</li>
+<li>We will add code to automatically create reserved keywords from the <em>TokenType</em> enumeration&nbsp;members</li>
+<li>We will add new members to the <em>Token</em> class: <em>lineno</em> and <em>column</em> to keep track of the token’s line number and column number, correspondingly, in the&nbsp;text</li>
+<li>We will refactor the <em>get_next_token</em> method code to make it shorter and have a generic code that handles single-character&nbsp;tokens</li>
+</ol>
+<p><br>
+1. Let’s define some error codes first. These codes will be used by our 
+parser and semantic analyzer. Let’s also define the following error 
+classes: <em>LexerError</em>, <em>ParserError</em>, and <em>SemanticError</em> for lexical, syntactic, and, correspondingly, semantic&nbsp;errors:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="k">class</span> <span class="nc">ErrorCode</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">UNEXPECTED_TOKEN</span> <span class="o">=</span> <span class="s1">'Unexpected token'</span>
+    <span class="n">ID_NOT_FOUND</span>     <span class="o">=</span> <span class="s1">'Identifier not found'</span>
+    <span class="n">DUPLICATE_ID</span>     <span class="o">=</span> <span class="s1">'Duplicate id found'</span>
+
+<span class="k">class</span> <span class="nc">Error</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_code</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_code</span> <span class="o">=</span> <span class="n">error_code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="n">token</span>
+        <span class="c1"># add exception class name before the message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s1">'{self.__class__.__name__}: {message}'</span>
+
+<span class="k">class</span> <span class="nc">LexerError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">ParserError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">SemanticError</span><span class="p">(</span><span class="n">Error</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+
+
+<p><br>
+<em>ErrorCode</em> is an enumeration class, where each member has a name and a&nbsp;value:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">class</span> <span class="nc">ErrorCode</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="o">...</span>     <span class="n">UNEXPECTED_TOKEN</span> <span class="o">=</span> <span class="s1">'Unexpected token'</span>
+<span class="o">...</span>     <span class="n">ID_NOT_FOUND</span>     <span class="o">=</span> <span class="s1">'Identifier not found'</span>
+<span class="o">...</span>     <span class="n">DUPLICATE_ID</span>     <span class="o">=</span> <span class="s1">'Duplicate id found'</span>
+<span class="o">...</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ErrorCode</span>
+<span class="o">&lt;</span><span class="n">enum</span> <span class="s1">'ErrorCode'</span><span class="o">&gt;</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ErrorCode</span><span class="o">.</span><span class="n">ID_NOT_FOUND</span>
+<span class="o">&lt;</span><span class="n">ErrorCode</span><span class="o">.</span><span class="n">ID_NOT_FOUND</span><span class="p">:</span> <span class="s1">'Identifier not found'</span><span class="o">&gt;</span>
+</pre></div>
+
+
+<p><br>
+The <em>Error</em> base class constructor takes three&nbsp;arguments:</p>
+<ul>
+<li>
+<p><em>error_code</em>: ErrorCode.ID_NOT_FOUND,&nbsp;etc</p>
+</li>
+<li>
+<p><em>token</em>: an instance of the <em>Token</em>&nbsp;class</p>
+</li>
+<li>
+<p><em>message</em>: a message with more detailed information about the&nbsp;problem</p>
+</li>
+</ul>
+<p>As I’ve mentioned before, <em>LexerError</em> is used to indicate an error encountered in the lexer, <em>ParserError</em> is for syntax related errors during the parsing phase, and <em>SemanticError</em> is for semantic&nbsp;errors.</p>
+<p><br>
+2. To provide better error messages, we want to display the position in 
+the source text where the problem happened. To be able do that, we need 
+to start tracking the current line number and column in our lexer as we 
+generate tokens. Let’s add <em>lineno</em> and <em>column</em> fields to the <em>Lexer</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Lexer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="c1"># self.pos is an index into self.text</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+        <span class="c1"># token line number and column number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineno</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+
+
+<p><br>
+3. The next change that we need to make is to reset <em>lineno</em> and <em>column</em> in the <em>advance</em> method when encountering a new line and also increase the <em>column</em> value on each advance of the <em>self.pos</em>&nbsp;pointer:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Advance the `pos` pointer and set the `current_char` variable."""</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineno</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># Indicates end of input</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+
+
+<p>With those changes in place, every time we create a token we will pass the current <em>lineno</em> and <em>column</em> from the lexer to the newly created&nbsp;token.</p>
+<p><br>
+4. Let’s update the <em>error</em> method to throw a <em>LexerError</em>
+ exception with a more detailed error message telling us the current 
+character that the lexer choked on and its location in the&nbsp;text.</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="s2">"Lexer error on '{lexeme}' line: {lineno} column: {column}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">lexeme</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_char</span><span class="p">,</span>
+        <span class="n">lineno</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lineno</span><span class="p">,</span>
+        <span class="n">column</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">raise</span> <span class="n">LexerError</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+5. Instead of having token types defined as module level variables, we 
+are going to move them into a dedicated enumeration class called <em>TokenType</em>. This will help us simplify certain operations and make some parts of our code a bit&nbsp;shorter.</p>
+<p>Old&nbsp;style:</p>
+<div class="highlight"><pre><span></span><span class="c1"># Token types</span>
+<span class="n">PLUS</span>  <span class="o">=</span> <span class="s1">'PLUS'</span>
+<span class="n">MINUS</span> <span class="o">=</span> <span class="s1">'MINUS'</span>
+<span class="n">MUL</span>   <span class="o">=</span> <span class="s1">'MUL'</span>
+<span class="o">...</span>
+</pre></div>
+
+
+<p>New&nbsp;style:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">TokenType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="c1"># single-character token types</span>
+    <span class="n">PLUS</span>          <span class="o">=</span> <span class="s1">'+'</span>
+    <span class="n">MINUS</span>         <span class="o">=</span> <span class="s1">'-'</span>
+    <span class="n">MUL</span>           <span class="o">=</span> <span class="s1">'*'</span>
+    <span class="n">FLOAT_DIV</span>     <span class="o">=</span> <span class="s1">'/'</span>
+    <span class="n">LPAREN</span>        <span class="o">=</span> <span class="s1">'('</span>
+    <span class="n">RPAREN</span>        <span class="o">=</span> <span class="s1">')'</span>
+    <span class="n">SEMI</span>          <span class="o">=</span> <span class="s1">';'</span>
+    <span class="n">DOT</span>           <span class="o">=</span> <span class="s1">'.'</span>
+    <span class="n">COLON</span>         <span class="o">=</span> <span class="s1">':'</span>
+    <span class="n">COMMA</span>         <span class="o">=</span> <span class="s1">','</span>
+    <span class="c1"># block of reserved words</span>
+    <span class="n">PROGRAM</span>       <span class="o">=</span> <span class="s1">'PROGRAM'</span>  <span class="c1"># marks the beginning of the block</span>
+    <span class="n">INTEGER</span>       <span class="o">=</span> <span class="s1">'INTEGER'</span>
+    <span class="n">REAL</span>          <span class="o">=</span> <span class="s1">'REAL'</span>
+    <span class="n">INTEGER_DIV</span>   <span class="o">=</span> <span class="s1">'DIV'</span>
+    <span class="n">VAR</span>           <span class="o">=</span> <span class="s1">'VAR'</span>
+    <span class="n">PROCEDURE</span>     <span class="o">=</span> <span class="s1">'PROCEDURE'</span>
+    <span class="n">BEGIN</span>         <span class="o">=</span> <span class="s1">'BEGIN'</span>
+    <span class="n">END</span>           <span class="o">=</span> <span class="s1">'END'</span>      <span class="c1"># marks the end of the block</span>
+    <span class="c1"># misc</span>
+    <span class="n">ID</span>            <span class="o">=</span> <span class="s1">'ID'</span>
+    <span class="n">INTEGER_CONST</span> <span class="o">=</span> <span class="s1">'INTEGER_CONST'</span>
+    <span class="n">REAL_CONST</span>    <span class="o">=</span> <span class="s1">'REAL_CONST'</span>
+    <span class="n">ASSIGN</span>        <span class="o">=</span> <span class="s1">':='</span>
+    <span class="n">EOF</span>           <span class="o">=</span> <span class="s1">'EOF'</span>
+</pre></div>
+
+
+<p><br>
+6. We used to manually add items to the <em>RESERVED_KEYWORDS</em> dictionary whenever we had to add a new token type that was also a reserved keyword. If we wanted to add a new <span class="caps">STRING</span> token type, we would have&nbsp;to</p>
+<ul>
+<li>(a) create a new module level variable <span class="caps">STRING</span> = ‘<span class="caps">STRING</span>’</li>
+<li>(b) manually add it to the <em>RESERVED_KEYWORDS</em>&nbsp;dictionary</li>
+</ul>
+<p>Now that we have the <em>TokenType</em> enumeration class, we can remove the manual step <strong>(b)</strong> above and keep token types in one place only. This is the “<a href="https://www.codesimplicity.com/post/two-is-too-many/">two is too many</a>”
+ rule in action - going forward, the only change you need to make to add
+ a new keyword token type is to put the keyword between <span class="caps">PROGRAM</span> and <span class="caps">END</span> in the <em>TokenType</em> enumeration class, and the <em>_build_reserved_keywords</em> function will take care of the&nbsp;rest:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_build_reserved_keywords</span><span class="p">():</span>
+    <span class="sd">"""Build a dictionary of reserved keywords.</span>
+
+<span class="sd">    The function relies on the fact that in the TokenType</span>
+<span class="sd">    enumeration the beginning of the block of reserved keywords is</span>
+<span class="sd">    marked with PROGRAM and the end of the block is marked with</span>
+<span class="sd">    the END keyword.</span>
+
+<span class="sd">    Result:</span>
+<span class="sd">        {'PROGRAM': &lt;TokenType.PROGRAM: 'PROGRAM'&gt;,</span>
+<span class="sd">         'INTEGER': &lt;TokenType.INTEGER: 'INTEGER'&gt;,</span>
+<span class="sd">         'REAL': &lt;TokenType.REAL: 'REAL'&gt;,</span>
+<span class="sd">         'DIV': &lt;TokenType.INTEGER_DIV: 'DIV'&gt;,</span>
+<span class="sd">         'VAR': &lt;TokenType.VAR: 'VAR'&gt;,</span>
+<span class="sd">         'PROCEDURE': &lt;TokenType.PROCEDURE: 'PROCEDURE'&gt;,</span>
+<span class="sd">         'BEGIN': &lt;TokenType.BEGIN: 'BEGIN'&gt;,</span>
+<span class="sd">         'END': &lt;TokenType.END: 'END'&gt;}</span>
+<span class="sd">    """</span>
+    <span class="c1"># enumerations support iteration, in definition order</span>
+    <span class="n">tt_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">TokenType</span><span class="p">)</span>
+    <span class="n">start_index</span> <span class="o">=</span> <span class="n">tt_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">PROGRAM</span><span class="p">)</span>
+    <span class="n">end_index</span> <span class="o">=</span> <span class="n">tt_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">END</span><span class="p">)</span>
+    <span class="n">reserved_keywords</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">token_type</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">token_type</span>
+        <span class="k">for</span> <span class="n">token_type</span> <span class="ow">in</span> <span class="n">tt_list</span><span class="p">[</span><span class="n">start_index</span><span class="p">:</span><span class="n">end_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">reserved_keywords</span>
+
+
+<span class="n">RESERVED_KEYWORDS</span> <span class="o">=</span> <span class="n">_build_reserved_keywords</span><span class="p">()</span>
+</pre></div>
+
+
+<p><br>
+As you can see from the function’s documentation string, the function 
+relies on the fact that a block of reserved keywords in the <em>TokenType</em> enum is marked by <span class="caps">PROGRAM</span> and <span class="caps">END</span>&nbsp;keywords.</p>
+<p>The function first turns <em>TokenType</em> into a list (the definition order is preserved), and then it gets the starting index of the block (marked by the <span class="caps">PROGRAM</span> keyword) and the end index of the block (marked by the <span class="caps">END</span>
+ keyword). Next, it uses dictionary comprehension to build a dictionary 
+where the keys are string values of the enum members and the values are 
+the <em>TokenType</em> members&nbsp;themselves.</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">spi</span> <span class="kn">import</span> <span class="n">_build_reserved_keywords</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pprint</span><span class="p">(</span><span class="n">_build_reserved_keywords</span><span class="p">())</span>  <span class="c1"># 'pprint' sorts the keys</span>
+<span class="p">{</span><span class="s1">'BEGIN'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">BEGIN</span><span class="p">:</span> <span class="s1">'BEGIN'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'DIV'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">INTEGER_DIV</span><span class="p">:</span> <span class="s1">'DIV'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'END'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">END</span><span class="p">:</span> <span class="s1">'END'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'INTEGER'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">INTEGER</span><span class="p">:</span> <span class="s1">'INTEGER'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'PROCEDURE'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">PROCEDURE</span><span class="p">:</span> <span class="s1">'PROCEDURE'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'PROGRAM'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">PROGRAM</span><span class="p">:</span> <span class="s1">'PROGRAM'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'REAL'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">REAL</span><span class="p">:</span> <span class="s1">'REAL'</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s1">'VAR'</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">TokenType</span><span class="o">.</span><span class="n">VAR</span><span class="p">:</span> <span class="s1">'VAR'</span><span class="o">&gt;</span><span class="p">}</span>
+</pre></div>
+
+
+<p><br>
+7. The next change is to add new members to the <em>Token</em> class, namely <em>lineno</em> and <em>column,</em> to keep track of a token’s line number and column number in a&nbsp;text</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Token</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">lineno</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineno</span> <span class="o">=</span> <span class="n">lineno</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""String representation of the class instance.</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; Token(TokenType.INTEGER, 7, lineno=5, column=10)</span>
+<span class="sd">            Token(TokenType.INTEGER, 7, position=5:10)</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="s1">'Token({type}, {value}, position={lineno}:{column})'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="n">lineno</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lineno</span><span class="p">,</span>
+            <span class="n">column</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</pre></div>
+
+
+<p><br>
+8. Now, onto <em>get_next_token</em> method changes. Thanks to enums, we
+ can reduce the amount of code that deals with single character tokens 
+by writing a generic code that generates single character tokens and 
+doesn’t need to change when we add a new single character 
+token&nbsp;type:</p>
+<p>Instead of a lot of code blocks like&nbsp;these:</p>
+<div class="highlight"><pre><span></span><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">';'</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">SEMI</span><span class="p">,</span> <span class="s1">';'</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">':'</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">COLON</span><span class="p">,</span> <span class="s1">':'</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">','</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">COMMA</span><span class="p">,</span> <span class="s1">','</span><span class="p">)</span>
+<span class="o">...</span>
+</pre></div>
+
+
+<p>We can now use this generic code to take care of all current and future single-character&nbsp;tokens</p>
+<div class="highlight"><pre><span></span><span class="c1"># single-character token</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># get enum member by value, e.g.</span>
+    <span class="c1"># TokenType(';') --&gt; TokenType.SEMI</span>
+    <span class="n">token_type</span> <span class="o">=</span> <span class="n">TokenType</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_char</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="c1"># no enum member with value equal to self.current_char</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">()</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># create a token with a single-character lexeme as its value</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">token_type</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">token_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>  <span class="c1"># e.g. ';', '.', etc</span>
+        <span class="n">lineno</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lineno</span><span class="p">,</span>
+        <span class="n">column</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">token</span>
+</pre></div>
+
+
+<p>Arguably it’s less readable than a bunch of <em>if</em> blocks, but 
+it’s pretty straightforward once you understand what’s going on here. 
+Python enums allow us to access enum members by values and that’s what 
+we use in the code above. It works like&nbsp;this:</p>
+<ul>
+<li>First we try to get a <em>TokenType</em> member by the value of <em>self.current_char</em></li>
+<li>If the operation throws a <em>ValueError</em> exception, that means we don’t support that token&nbsp;type</li>
+<li>Otherwise we create a correct token with the corresponding token type and&nbsp;value.</li>
+</ul>
+<p>This block of code will handle all current and new single character 
+tokens. All we need to do to support a new token type is to add the new 
+token type to the <em>TokenType</em> definition and that’s it. The code above will stay&nbsp;unchanged.</p>
+<p>The way I see it, it’s a win-win situation with this generic code: we
+ learned a bit more about Python enums, specifically how to access 
+enumeration members by values; we wrote some generic code to handle all 
+single character tokens, and, as a side effect, we reduced the amount of
+ repetitive code to handle those single character&nbsp;tokens.</p>
+<p>The next stop is parser&nbsp;changes.</p>
+<p><br>
+Here is a list of changes we’ll make in our parser&nbsp;today:</p>
+<ol>
+<li>We will update the parser’s <em>error</em> method to throw a <em>ParserError</em> exception with an error code and current&nbsp;token</li>
+<li>We will update the <em>eat</em> method to call the modified <em>error</em>&nbsp;method</li>
+<li>We will refactor the <em>declarations</em> method and move the code that parses a procedure declaration into a separate&nbsp;method.</li>
+</ol>
+<p>1. Let’s update the parser’s <em>error</em> method to throw a <em>ParserError</em> exception with some useful&nbsp;information</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_code</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">ParserError</span><span class="p">(</span>
+        <span class="n">error_code</span><span class="o">=</span><span class="n">error_code</span><span class="p">,</span>
+        <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="n">f</span><span class="s1">'{error_code.value} -&gt; {token}'</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+2.  And now let’s modify the <em>eat</em> method to call the updated <em>error</em>&nbsp;method</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">eat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_type</span><span class="p">):</span>
+    <span class="c1"># compare the current token type with the passed token</span>
+    <span class="c1"># type and if they match then "eat" the current token</span>
+    <span class="c1"># and assign the next token to the self.current_token,</span>
+    <span class="c1"># otherwise raise an exception.</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">token_type</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="n">error_code</span><span class="o">=</span><span class="n">ErrorCode</span><span class="o">.</span><span class="n">UNEXPECTED_TOKEN</span><span class="p">,</span>
+            <span class="n">token</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="p">,</span>
+        <span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+3.  Next, let’s update the <em>declaration</em>‘s documentation string and move the code that parses a procedure declaration into a separate method, <em>procedure_declaration</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">declarations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""</span>
+<span class="sd">    declarations : (VAR (variable_declaration SEMI)+)? procedure_declaration*</span>
+<span class="sd">    """</span>
+    <span class="n">declarations</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">TokenType</span><span class="o">.</span><span class="n">VAR</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">VAR</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">TokenType</span><span class="o">.</span><span class="n">ID</span><span class="p">:</span>
+            <span class="n">var_decl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_declaration</span><span class="p">()</span>
+            <span class="n">declarations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">var_decl</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">SEMI</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">TokenType</span><span class="o">.</span><span class="n">PROCEDURE</span><span class="p">:</span>
+        <span class="n">proc_decl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">procedure_declaration</span><span class="p">()</span>
+        <span class="n">declarations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">proc_decl</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">declarations</span>
+
+<span class="k">def</span> <span class="nf">procedure_declaration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""procedure_declaration :</span>
+<span class="sd">         PROCEDURE ID (LPAREN formal_parameter_list RPAREN)? SEMI block SEMI</span>
+<span class="sd">    """</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">PROCEDURE</span><span class="p">)</span>
+    <span class="n">proc_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">value</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">ID</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">TokenType</span><span class="o">.</span><span class="n">LPAREN</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">LPAREN</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formal_parameter_list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">RPAREN</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">SEMI</span><span class="p">)</span>
+    <span class="n">block_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block</span><span class="p">()</span>
+    <span class="n">proc_decl</span> <span class="o">=</span> <span class="n">ProcedureDecl</span><span class="p">(</span><span class="n">proc_name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">block_node</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">TokenType</span><span class="o">.</span><span class="n">SEMI</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">proc_decl</span>
+</pre></div>
+
+
+<p>These are all the changes in the parser. Now, we’ll move onto the semantic&nbsp;analyzer.</p>
+<p><br>
+And finally here is a list of changes we’ll make in our semantic&nbsp;analyzer:</p>
+<ol>
+<li>We will add a new <em>error</em> method to the <em>SemanticAnalyzer</em> class to throw a <em>SemanticError</em> exception with some additional&nbsp;information</li>
+<li>We will update <em>visit_VarDecl</em> to signal an error by calling the <em>error</em> method with a relevant error code and&nbsp;token</li>
+<li>We will also update <em>visit_Var</em> to signal an error by calling the <em>error</em> method with a relevant error code and&nbsp;token</li>
+<li>We will add a <em>log</em> method to both the <em>ScopedSymbolTable</em> and <em>SemanticAnalyzer</em>, and replace all <em>print</em> statements with calls to <em>self.log</em> in the corresponding&nbsp;classes</li>
+<li>We will add a command line option “—-scope” to turn scope logging on
+ and off (it will be off by default) to control how “noisy” we want our 
+interpreter to&nbsp;be</li>
+<li>We will add empty <em>visit_Num</em> and <em>visit_UnaryOp</em>&nbsp;methods</li>
+</ol>
+<p><br>
+1. First things first. Let’s add the <em>error</em> method to throw a <em>SemanticError</em> exception with a corresponding error code, token and&nbsp;message:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_code</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">SemanticError</span><span class="p">(</span>
+        <span class="n">error_code</span><span class="o">=</span><span class="n">error_code</span><span class="p">,</span>
+        <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="n">f</span><span class="s1">'{error_code.value} -&gt; {token}'</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+2. Next, let’s update <em>visit_VarDecl</em> to signal an error by calling the <em>error</em> method with a relevant error code and&nbsp;token</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="c1"># Signal an error if the table already has a symbol</span>
+    <span class="c1"># with the same name</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">current_scope_only</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="n">error_code</span><span class="o">=</span><span class="n">ErrorCode</span><span class="o">.</span><span class="n">DUPLICATE_ID</span><span class="p">,</span>
+            <span class="n">token</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">token</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+3. We also need to update the <em>visit_Var</em> method to signal an error by calling the <em>error</em> method with a relevant error code and&nbsp;token</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">var_symbol</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error_code</span><span class="o">=</span><span class="n">ErrorCode</span><span class="o">.</span><span class="n">ID_NOT_FOUND</span><span class="p">,</span> <span class="n">token</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">token</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now semantic errors will be reported as&nbsp;follows:</p>
+<div class="highlight"><pre><span></span>SemanticError: Duplicate id found -&gt; Token(TokenType.ID, 'a', position=21:4)
+</pre></div>
+
+
+<p>Or</p>
+<div class="highlight"><pre><span></span>SemanticError: Identifier not found -&gt; Token(TokenType.ID, 'b', position=22:9)
+</pre></div>
+
+
+<p><br>
+4. Let’s add the <em>log</em> method to both the <em>ScopedSymbolTable</em> and <em>SemanticAnalyzer</em>, and replace all <em>print</em> statements with calls to <em>self.log</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_SHOULD_LOG_SCOPE</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+
+
+<p>As you can see, the message will be printed only if the global variable _SHOULD_LOG_SCOPE is set to true. The <em>—scope</em> command line option that we will add in the next step will control the value of the _SHOULD_LOG_SCOPE&nbsp;variable.</p>
+<p><br>
+5. Now, let’s update the <em>main</em> function and add a command line option “—scope” to turn scope logging on and off (it’s off by&nbsp;default)</p>
+<div class="highlight"><pre><span></span><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s1">'SPI - Simple Pascal Interpreter'</span>
+<span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">'inputfile'</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">'Pascal source file'</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+    <span class="s1">'--scope'</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s1">'Print scope information'</span><span class="p">,</span>
+    <span class="n">action</span><span class="o">=</span><span class="s1">'store_true'</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="k">global</span> <span class="n">_SHOULD_LOG_SCOPE</span>
+<span class="n">_SHOULD_LOG_SCOPE</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">scope</span>
+</pre></div>
+
+
+<p>Here is an example with the switch&nbsp;on:</p>
+<div class="highlight"><pre><span></span>$ python spi.py idnotfound.pas --scope
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER. (Scope name: global)
+Lookup: a. (Scope name: global)
+Insert: a
+Lookup: b. (Scope name: global)
+SemanticError: Identifier not found -&gt; Token(TokenType.ID, 'b', position=6:9)
+</pre></div>
+
+
+<p>And with scope logging off&nbsp;(default):</p>
+<div class="highlight"><pre><span></span>$ python spi.py idnotfound.pas
+SemanticError: Identifier not found -&gt; Token(TokenType.ID, 'b', position=6:9)
+</pre></div>
+
+
+<p><br>
+6.  Add empty <em>visit_Num</em> and <em>visit_UnaryOp</em>&nbsp;methods</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">visit_UnaryOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+
+
+<p>These are all the changes to our semantic analyzer for&nbsp;now.</p>
+<p>See <a href="https://github.com/rspivak/lsbasi/tree/master/part15/">GitHub</a>
+ for Pascal files with different errors to try your updated interpreter 
+on and see what error messages the interpreter&nbsp;generates.</p>
+<p><br>
+That is all for today. You can find the full source code for today’s article interpreter on <a href="https://github.com/rspivak/lsbasi/tree/master/part15/">GitHub</a>.
+ In the next article we’ll talk about how to recognize (i.e. how to 
+parse) procedure calls. Stay tuned and see you next&nbsp;time!</p>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app5694" name="dsq-app5694" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/a.html" style="height: 1930px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-15';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part15/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div><iframe style="display: none;"></iframe>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A015.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+</body></html>

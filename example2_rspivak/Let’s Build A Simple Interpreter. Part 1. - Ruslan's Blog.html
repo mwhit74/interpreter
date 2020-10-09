@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part&nbsp;1. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part1/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="“If you don’t know how compilers work, then you don’t know how computers work. If you’re not 100% sure whether you know how compilers work, then you don’t know how they work.” — Steve&nbsp;Yegge There you have it. Think about it. It doesn’t really matter …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part&nbsp;1.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part1/">
+        <meta property="og:description" content="“If you don’t know how compilers work, then you don’t know how computers work. If you’re not 100% sure whether you know how compilers work, then you don’t know how they work.” — Steve&nbsp;Yegge There you have it. Think about it. It doesn’t really matter …">
+        <meta property="article:published_time" content="2015-06-15">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/a_data/lounge.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part1/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part&nbsp;1.">
+                        Let’s Build A Simple Interpreter. Part&nbsp;1.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2015-06-15T06:00:00-04:00"> Mon, June 15, 2015</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <p><br></p>
+<blockquote>
+<p><em><strong><span class="dquo">“</span>If you don’t know how 
+compilers work, then you don’t know how computers work. If you’re not 
+100% sure whether you know how compilers work, then you don’t know how 
+they work.”</strong> — Steve&nbsp;Yegge</em></p>
+</blockquote>
+<p>There you have it. Think about it. It doesn’t really matter whether 
+you’re a newbie or a seasoned software developer: if you don’t know how 
+compilers and interpreters work, then you don’t know how computers work.
+ It’s that&nbsp;simple.</p>
+<p>So, do you know how compilers and interpreters work? And I mean, are 
+you 100% sure that you know how they work? If you&nbsp;don’t.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_i_dont_know.png" width="480"></p>
+<p>Or if you don’t and you’re really agitated about&nbsp;it.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_omg.png" width="480"></p>
+<p>Do not worry. If you stick around and work through the series and 
+build an interpreter and a compiler with me you will know how they work 
+in the end. And you will become a confident happy camper too. At least I
+ hope&nbsp;so.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_i_know.png" width="480"></p>
+<p>Why would you study interpreters and compilers? I will give you three&nbsp;reasons.</p>
+<ol>
+<li>To write an interpreter or a compiler you have to have a lot of 
+technical skills that you need to use together. Writing an interpreter 
+or a compiler will help you improve those skills and become a better 
+software developer. As well, the skills you will learn are useful in 
+writing any software, not just interpreters or&nbsp;compilers.</li>
+<li>You really want to know how computers work. Often interpreters and 
+compilers look like magic. And you shouldn’t be comfortable with that 
+magic. You want to demystify the process of building an interpreter and a
+ compiler, understand how they work, and get in control of&nbsp;things.</li>
+<li>You want to create your own programming language or domain specific 
+language. If you create one, you will also need to create either an 
+interpreter or a compiler for it. Recently, there has been a resurgence 
+of interest in new programming languages. And you can see a new 
+programming language pop up almost every day: Elixir, Go, Rust just to 
+name a&nbsp;few.</li>
+</ol>
+<p><br>
+Okay, but what are interpreters and&nbsp;compilers?</p>
+<p>The goal of an <strong>interpreter</strong> or a <strong>compiler</strong>
+ is to translate a source program in some high-level language into some 
+other form. Pretty vague, isn’t it? Just bear with me, later in the 
+series you will learn exactly what the source program is 
+translated&nbsp;into.</p>
+<p>At this point you may also wonder what the difference is between an interpreter and a compiler.
+For the purpose of this series, let’s agree that if a translator translates a source program into machine language, it is a <strong>compiler</strong>. If a translator processes and executes the source program without translating it into machine language first, it is an <strong>interpreter</strong>. Visually it looks something like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_compiler_interpreter.png" width="700"></p>
+<p>I hope that by now you’re convinced that you really want to study and
+ build an interpreter and a compiler. What can you expect from this 
+series on&nbsp;interpreters?</p>
+<p>Here is the deal. You and I are going to create a simple interpreter for a large subset of <a href="https://en.wikipedia.org/wiki/Pascal_%28programming_language%29">Pascal</a> language. At the end of this series you will have a working Pascal interpreter and a source-level debugger like Python’s <a href="https://docs.python.org/2/library/pdb.html">pdb</a>.</p>
+<p>You might ask, why Pascal? For one thing, it’s not a made-up language
+ that I came up with just for this series: it’s a real programming 
+language that has many important language constructs. And some old, but 
+useful, <span class="caps">CS</span> books use Pascal programming 
+language in their examples (I understand that that’s not a particularly 
+compelling reason to choose a language to build an interpreter for, but I
+ thought it would be nice for a change to learn a non-mainstream 
+language&nbsp;:)</p>
+<p>Here is an example of a factorial function in Pascal that you will be
+ able to interpret with your own interpreter and debug with the 
+interactive source-level debugger that you will create along 
+the&nbsp;way:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">factorial</span><span class="o">;</span>
+
+<span class="k">function</span> <span class="nf">factorial</span><span class="p">(</span><span class="n">n</span><span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">:</span> <span class="kt">longint</span><span class="o">;</span>
+<span class="k">begin</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">then</span>
+        <span class="n">factorial</span> <span class="o">:=</span> <span class="mi">1</span>
+    <span class="k">else</span>
+        <span class="n">factorial</span> <span class="o">:=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">factorial</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">;</span>
+<span class="k">end</span><span class="o">;</span>
+
+<span class="k">var</span>
+    <span class="n">n</span><span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="o">:=</span> <span class="mi">0</span> <span class="k">to</span> <span class="mi">16</span> <span class="k">do</span>
+        <span class="nb">writeln</span><span class="p">(</span><span class="n">n</span><span class="o">,</span> <span class="s">'! = '</span><span class="o">,</span> <span class="n">factorial</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>The implementation language of the Pascal interpreter will be Python,
+ but you can use any language you want because the ideas presented don’t
+ depend on any particular implementation language. Okay, let’s get down 
+to business. Ready, set,&nbsp;go!</p>
+<p>You will start your first foray into interpreters and compilers by 
+writing a simple interpreter of arithmetic expressions, also known as a 
+calculator. Today the goal is pretty minimalistic: to make your 
+calculator handle the addition of two single digit integers like <strong>3+5</strong>.
+Here is the source code for your calculator, sorry,&nbsp;interpreter:</p>
+<div class="highlight"><pre><span></span><span class="c1"># Token types</span>
+<span class="c1">#</span>
+<span class="c1"># EOF (end-of-file) token is used to indicate that</span>
+<span class="c1"># there is no more input left for lexical analysis</span>
+<span class="n">INTEGER</span><span class="p">,</span> <span class="n">PLUS</span><span class="p">,</span> <span class="n">EOF</span> <span class="o">=</span> <span class="s1">'INTEGER'</span><span class="p">,</span> <span class="s1">'PLUS'</span><span class="p">,</span> <span class="s1">'EOF'</span>
+
+
+<span class="k">class</span> <span class="nc">Token</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="c1"># token type: INTEGER, PLUS, or EOF</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="c1"># token value: 0, 1, 2. 3, 4, 5, 6, 7, 8, 9, '+', or None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""String representation of the class instance.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            Token(INTEGER, 3)</span>
+<span class="sd">            Token(PLUS '+')</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="s1">'Token({type}, {value})'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">Interpreter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="c1"># client string input, e.g. "3+5"</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span>
+        <span class="c1"># self.pos is an index into self.text</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># current token instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">'Error parsing input'</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_next_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""Lexical analyzer (also known as scanner or tokenizer)</span>
+
+<span class="sd">        This method is responsible for breaking a sentence</span>
+<span class="sd">        apart into tokens. One token at a time.</span>
+<span class="sd">        """</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="c1"># is self.pos index past the end of the self.text ?</span>
+        <span class="c1"># if so, then return EOF token because there is no more</span>
+        <span class="c1"># input left to convert into tokens</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">EOF</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="c1"># get a character at the position self.pos and decide</span>
+        <span class="c1"># what token to create based on the single character</span>
+        <span class="n">current_char</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+
+        <span class="c1"># if the character is a digit then convert it to</span>
+        <span class="c1"># integer, create an INTEGER token, increment self.pos</span>
+        <span class="c1"># index to point to the next character after the digit,</span>
+        <span class="c1"># and return the INTEGER token</span>
+        <span class="k">if</span> <span class="n">current_char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_char</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">token</span>
+
+        <span class="k">if</span> <span class="n">current_char</span> <span class="o">==</span> <span class="s1">'+'</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="n">PLUS</span><span class="p">,</span> <span class="n">current_char</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">token</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">eat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_type</span><span class="p">):</span>
+        <span class="c1"># compare the current token type with the passed token</span>
+        <span class="c1"># type and if they match then "eat" the current token</span>
+        <span class="c1"># and assign the next token to the self.current_token,</span>
+        <span class="c1"># otherwise raise an exception.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">token_type</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">expr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""expr -&gt; INTEGER PLUS INTEGER"""</span>
+        <span class="c1"># set current token to the first token taken from the input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+
+        <span class="c1"># we expect the current token to be a single-digit integer</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">)</span>
+
+        <span class="c1"># we expect the current token to be a '+' token</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">PLUS</span><span class="p">)</span>
+
+        <span class="c1"># we expect the current token to be a single-digit integer</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">)</span>
+        <span class="c1"># after the above call the self.current_token is set to</span>
+        <span class="c1"># EOF token</span>
+
+        <span class="c1"># at this point INTEGER PLUS INTEGER sequence of tokens</span>
+        <span class="c1"># has been successfully found and the method can just</span>
+        <span class="c1"># return the result of adding two integers, thus</span>
+        <span class="c1"># effectively interpreting client input</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">right</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># To run under Python3 replace 'raw_input' call</span>
+            <span class="c1"># with 'input'</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s1">'calc&gt; '</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">interpreter</span> <span class="o">=</span> <span class="n">Interpreter</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">interpreter</span><span class="o">.</span><span class="n">expr</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">'__main__'</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+
+<p><br>
+Save the above code into <em>calc1.py</em> file or download it directly from <a href="https://github.com/rspivak/lsbasi/blob/master/part1/calc1.py">GitHub</a>.
+ Before you start digging deeper into the code, run the calculator on 
+the command line and see it in action. Play with it! Here is a sample 
+session on my laptop (if you want to run the calculator under Python3 
+you will need to replace <em>raw_input</em> with <em>input</em>):</p>
+<div class="highlight"><pre><span></span>$ python calc1.py
+calc&gt; <span class="m">3</span>+4
+<span class="m">7</span>
+calc&gt; <span class="m">3</span>+5
+<span class="m">8</span>
+calc&gt; <span class="m">3</span>+9
+<span class="m">12</span>
+calc&gt;
+</pre></div>
+
+
+<p>For your simple calculator to work properly without throwing an exception, your input needs to follow certain&nbsp;rules:</p>
+<ul>
+<li>Only single digit integers are allowed in the&nbsp;input</li>
+<li>The only arithmetic operation supported at the moment is&nbsp;addition</li>
+<li>No whitespace characters are allowed anywhere in the&nbsp;input</li>
+</ul>
+<p>Those restrictions are necessary to make the calculator simple. Don’t worry, you’ll make it pretty complex pretty&nbsp;soon.</p>
+<p>Okay, now let’s dive in and see how your interpreter works and how it evaluates arithmetic&nbsp;expressions.</p>
+<p>When you enter an expression <em>3+5</em> on the command line your interpreter gets a string <em>“3+5”</em>. In order for the interpreter to actually understand what to do with that string it first needs to break the input <em>“3+5”</em> into components called <strong>tokens</strong>. A <strong>token</strong> is an object that has a type and a value. For example, for the string <em>“3”</em> the type of the token will be <span class="caps">INTEGER</span> and the corresponding value will be integer <em>3</em>.</p>
+<p>The process of breaking the input string into tokens is called <strong>lexical analysis</strong>.
+ So, the first step your interpreter needs to do is read the input of 
+characters and convert it into a stream of tokens. The part of the 
+interpreter that does it is called a <strong>lexical analyzer</strong>, or <strong>lexer</strong> for short. You might also encounter other names for the same component, like <strong>scanner</strong> or <strong>tokenizer</strong>.
+ They all mean the same: the part of your interpreter or compiler that 
+turns the input of characters into a stream of&nbsp;tokens.</p>
+<p>The method <em>get_next_token</em> of the <em>Interpreter</em> class 
+is your lexical analyzer. Every time you call it, you get the next token
+ created from the input of characters passed to the interpreter. Let’s 
+take a closer look at the method itself and see how it actually does its
+ job of converting characters into tokens.
+The input is stored in the variable <em>text</em> that holds the input string and <em>pos</em> is an index into that string (think of the string as an array of characters). <em>pos</em> is initially set to 0 and points to the character <em>‘3’</em>. The method first checks whether the character is a digit and if so, it increments <em>pos</em> and returns a token instance with the type <span class="caps">INTEGER</span> and the value set to the integer value of the string <em>‘3’</em>, which is an integer <em>3</em>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_lexer1.png" width="640"></p>
+<p>The <em>pos</em> now points to the <em>‘+’</em> character in the <em>text</em>. The next time you call the method, it tests if a character at the position <em>pos</em> is a digit and then it tests if the character is a plus sign, which it is. As a result the method increments <em>pos</em> and returns a newly created token with the type <span class="caps">PLUS</span> and value <em>‘+’</em>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_lexer2.png" width="640"></p>
+<p>The <em>pos</em> now points to character <em>‘5’</em>. When you call the <em>get_next_token</em> method again the method checks if it’s a digit, which it is, so it increments <em>pos</em> and returns a new <span class="caps">INTEGER</span> token with the value of the token set to integer <em>5</em>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_lexer3.png" width="640"></p>
+<p>Because the <em>pos</em> index is now past the end of the string <em>“3+5”</em> the <em>get_next_token</em> method returns the <span class="caps">EOF</span> token every time you call&nbsp;it:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_lexer4.png" width="640"></p>
+<p>Try it out and see for yourself how the lexer component of your calculator&nbsp;works:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">calc1</span> <span class="kn">import</span> <span class="n">Interpreter</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interpreter</span> <span class="o">=</span> <span class="n">Interpreter</span><span class="p">(</span><span class="s1">'3+5'</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interpreter</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+<span class="n">Token</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interpreter</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+<span class="n">Token</span><span class="p">(</span><span class="n">PLUS</span><span class="p">,</span> <span class="s1">'+'</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interpreter</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+<span class="n">Token</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">interpreter</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>
+<span class="n">Token</span><span class="p">(</span><span class="n">EOF</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+</pre></div>
+
+
+<p>So now that your interpreter has access to the stream of tokens made 
+from the input characters, the interpreter needs to do something with 
+it: it needs to find the structure in the flat stream of tokens it gets 
+from the lexer <em>get_next_token</em>. Your interpreter expects to find the following structure in that stream: <span class="caps">INTEGER</span> -&gt; <span class="caps">PLUS</span> -&gt; <span class="caps">INTEGER</span>. That is, it tries to find a sequence of tokens: integer followed by a plus sign followed by an&nbsp;integer.</p>
+<p>The method responsible for finding and interpreting that structure is <em>expr</em>. This method verifies that the sequence of tokens does indeed correspond to the expected sequence of tokens, i.e <span class="caps">INTEGER</span> -&gt; <span class="caps">PLUS</span> -&gt; <span class="caps">INTEGER</span>.
+ After it’s successfully confirmed the structure, it generates the 
+result by adding the value of the token on the left side of the <span class="caps">PLUS</span> and the right side of the <span class="caps">PLUS</span>, thus successfully interpreting the arithmetic expression you passed to the&nbsp;interpreter.</p>
+<p>The <em>expr</em> method itself uses the helper method <em>eat</em> to verify that the token type passed to the <em>eat</em> method matches the current token type. After matching the passed token type the <em>eat</em> method gets the next token and assigns it to the <em>current_token</em>
+ variable, thus effectively “eating” the currently matched token and 
+advancing the imaginary pointer in the stream of tokens. If the 
+structure in the stream of tokens doesn’t correspond to the expected <span class="caps">INTEGER</span> <span class="caps">PLUS</span> <span class="caps">INTEGER</span> sequence of tokens the <em>eat</em> method throws an&nbsp;exception.</p>
+<p>Let’s recap what your interpreter does to evaluate an arithmetic&nbsp;expression:</p>
+<ul>
+<li>The interpreter accepts an input string, let’s say&nbsp;“3+5”</li>
+<li>The interpreter calls the <em>expr</em> method to find a structure in the stream of tokens returned by the lexical analyzer <em>get_next_token</em>. The structure it tries to find is of the form <span class="caps">INTEGER</span> <span class="caps">PLUS</span> <span class="caps">INTEGER</span>. After it’s confirmed the structure, it interprets the input by adding the values of two <span class="caps">INTEGER</span> tokens because it’s clear to the interpreter at that point that what it needs to do is add two integers, 3 and&nbsp;5.</li>
+</ul>
+<p>Congratulate yourself. You’ve just learned how to build your very first&nbsp;interpreter!</p>
+<p>Now it’s time for&nbsp;exercises.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_exercises2.png" width="320"></p>
+<p>You didn’t think you would just read this article and that would be 
+enough, did you? Okay, get your hands dirty and do the 
+following&nbsp;exercises:</p>
+<ol>
+<li>Modify the code to allow multiple-digit integers in the input, for example&nbsp;“12+3”</li>
+<li>Add a method that skips whitespace characters so that your 
+calculator can handle inputs with whitespace characters like ” 12 
++&nbsp;3”</li>
+<li>Modify the code and instead of ‘+’ handle ‘-‘ to evaluate subtractions like&nbsp;“7-5”</li>
+</ol>
+<p><strong>Check your&nbsp;understanding</strong></p>
+<ol>
+<li>What is an&nbsp;interpreter?</li>
+<li>What is a&nbsp;compiler?</li>
+<li>What’s the difference between an interpreter and a&nbsp;compiler?</li>
+<li>What is a&nbsp;token?</li>
+<li>What is the name of the process that breaks input apart into&nbsp;tokens?</li>
+<li>What is the part of the interpreter that does lexical analysis&nbsp;called?</li>
+<li>What are the other common names for that part of an interpreter or a&nbsp;compiler?</li>
+</ol>
+<p>Before I finish this article, I really want you to commit to studying
+ interpreters and compilers. And I want you to do it right now. Don’t 
+put it on the back burner. Don’t wait. If you’ve skimmed the article, 
+start over. If you’ve read it carefully but haven’t done exercises - do 
+them now. If you’ve done only some of them, finish the rest. You get the
+ idea. And you know what? Sign the commitment pledge to start learning 
+about interpreters and compilers today!
+<br>
+<br></p>
+<p><i>
+I, <strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong><strong><em>_</em></strong>____,
+ of being sound mind and body, do hereby pledge to commit to studying 
+interpreters and compilers starting today and get to a point where I 
+know 100% how they&nbsp;work!</i></p><i>
+<p>Signature:</p>
+</i><p><i>Date:
+</i></p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/lsbasi_part1_commitment_pledge.png" width="480"></p>
+<p>Sign it, date it, and put it somewhere where you can see it every day
+ to make sure that you stick to your commitment. And keep in mind the 
+definition of&nbsp;commitment:</p>
+<blockquote>
+<p><span class="dquo">“</span>Commitment is doing the thing you said you
+ were going to do long after the mood you said it in has left you.” — 
+Darren&nbsp;Hardy</p>
+</blockquote>
+<p>Okay, that’s it for today. In the next article of the mini series you
+ will extend your calculator to handle more arithmetic expressions. 
+Stay&nbsp;tuned.</p>
+<p>If you can’t wait for the second article and are chomping at the bit 
+to start digging deeper into interpreters and compilers, here is a list 
+of books I recommend that will help you along the&nbsp;way:</p>
+<ol>
+<li>
+<p><a href="http://www.amazon.com/gp/product/193435645X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=193435645X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=MP4DCXDV6DJMEJBL">Language Implementation Patterns: Create Your Own Domain-Specific and General Programming Languages (Pragmatic Programmers)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/ir_002" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/0470177071/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0470177071&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=UCLGQTPIYSWYKRRM">Writing Compilers and Interpreters: A Software Engineering Approach</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/ir_003" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/052182060X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=052182060X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=ZSKKZMV7YWR22NMW">Modern Compiler Implementation in Java</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/ir_004" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/1461446988/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=1461446988&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=PAXWJP5WCPZ7RKRD">Modern Compiler Design</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/ir_005" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/0321486811/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0321486811&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=GOEGDQG4HIHU56FQ">Compilers: Principles, Techniques, and Tools (2nd Edition)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/ir" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+</ol>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app6576" name="dsq-app6576" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/a.html" style="height: 8802px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-1';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part1/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A01.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>

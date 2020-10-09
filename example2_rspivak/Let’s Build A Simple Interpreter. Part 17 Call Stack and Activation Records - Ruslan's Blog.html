@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part 17: Call Stack and Activation&nbsp;Records - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part17/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="You may have to fight a battle more than once to win it. - Margaret&nbsp;Thatcher">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part 17: Call Stack and Activation&nbsp;Records">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part17/">
+        <meta property="og:description" content="You may have to fight a battle more than once to win it. - Margaret&nbsp;Thatcher">
+        <meta property="article:published_time" content="2019-08-28">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+            <meta property="og:image" content="https://ruslanspivak.com/lsbasi-part17/lsbasi_part17_stackgrowth.png">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+            <meta property="twitter:image" content="https://ruslanspivak.com/lsbasi-part17/lsbasi_part17_stackgrowth.png">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/a_data/lounge.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part17/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part 17: Call Stack and Activation&nbsp;Records">
+                        Let’s Build A Simple Interpreter. Part 17: Call Stack and Activation&nbsp;Records
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2019-08-28T11:00:00-04:00"> Wed, August 28, 2019</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <blockquote>
+<p><em><span class="dquo">“</span>You may have to fight a battle more than once to win it.” — Margaret&nbsp;Thatcher</em></p>
+</blockquote>
+<p>In 1968 during the Mexico City Summer Olympics, a marathon runner 
+named John Stephen Akhwari found himself thousands miles away from his 
+home country of Tanzania, in East Africa. While running the marathon at 
+the high altitude of Mexico City he got hit by other athletes jockeying 
+for position and fell to the ground, badly wounding his knee and causing
+ a dislocation. After receiving medical attention, instead of pulling 
+out of the competition after such a bad injury, he stood up and 
+continued the&nbsp;race.</p>
+<p>Mamo Wolde of Ethiopia, at 2:20:26 into the race, crossed the finish 
+line in first place. More than an hour later at 3:25:27, after the sun 
+had set, Akhwari, hobbling, with a bloody leg and his bandages dangling 
+and flapping in the wind, crossed the finish line, in last&nbsp;place.</p>
+<p>When a small crowd saw Akhwari crossing the line, they cheered him in
+ disbelief, and the few remaining reporters rushed onto the track to ask
+ him why he continued to run the race with his injuries. His response 
+went down in history: “My country did not send me 5,000 miles to start 
+the race. They sent me 5,000 miles to finish the&nbsp;race.”</p>
+<p>This story has since inspired many athletes and non-athletes alike. 
+You might be thinking at this point, “That’s great, it’s an inspiring 
+story, but what does it have to do with me?” The main message for you 
+and me is this: “Keep going!” This has been a long series spun over a 
+long period of time and at times it may feel daunting to go along with 
+it, but we’re approaching an important milestone in the series, so we 
+need to keep&nbsp;going.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/lsbasi_part17_keepgoing.png" width="480"></p>
+<p>Okay, let’s get to it!
+<br>
+<br></p>
+<p>We have a couple of goals for&nbsp;today:</p>
+<ol>
+<li>
+<p>Implement a new memory system that can support programs, procedure calls, and function&nbsp;calls.</p>
+</li>
+<li>
+<p>Replace the interpreter’s current memory system, represented by the <em>GLOBAL_MEMORY</em> dictionary, with the new memory system.
+<br>
+<br></p>
+</li>
+</ol>
+<p>Let’s start by answering the following&nbsp;questions:</p>
+<ol>
+<li>
+<p>What is a memory&nbsp;system?</p>
+</li>
+<li>
+<p>Why do we need a new memory&nbsp;system?</p>
+</li>
+<li>
+<p>What does the new memory system look&nbsp;like?</p>
+</li>
+<li>
+<p>Why would we want to replace the <em>GLOBAL_MEMORY</em>&nbsp;dictionary?</p>
+</li>
+</ol>
+<p><br></p>
+<p>1. <em>What is a memory&nbsp;system?</em></p>
+<p>To put it simply, it is a system for storing and accessing data in memory. At the hardware level, it is the physical memory (<span class="caps">RAM</span>)
+ where values are stored at particular physical addresses. At the 
+interpreter level, because our interpreter stores values according to 
+their variable names and not physical addresses, we represent memory 
+with a dictionary that maps names to values. Here is a simple 
+demonstration where we store the value of 7 by the variable name <em>y</em>, and then immediately access the value associated with the name <em>y</em>:</p>
+<div class="highlight"><pre><span></span>&gt;&gt;&gt; GLOBAL_MEMORY = {}
+&gt;&gt;&gt;
+&gt;&gt;&gt; GLOBAL_MEMORY['y'] = 7   # store value by name
+&gt;&gt;&gt;
+&gt;&gt;&gt; GLOBAL_MEMORY['y']       # access value by name
+7
+&gt;&gt;&gt;
+</pre></div>
+
+
+<p><br>
+We’ve been using this dictionary approach to represent global memory for
+ a while now. We’ve been storing and accessing variables at the <span class="caps">PROGRAM</span> level (the global level) using the <em>GLOBAL_MEMORY</em>
+ dictionary. Here are the parts of the interpreter concerned with the 
+“memory” creation, handling assignments of values to variables in memory
+ and accessing values by their&nbsp;names:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Interpreter</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">visit_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">var_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_value</span>
+
+    <span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">var_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">var_value</span>
+</pre></div>
+
+
+<p>Now that we’ve described how we currently represent memory in our interpreter, let’s find out an answer to the next question.
+<br>
+<br></p>
+<p>2. <em>Why do we need a new memory system for our&nbsp;interpreter?</em></p>
+<p>It turns out that having just one dictionary to represent global 
+memory is not enough to support procedure and function calls, including 
+recursive&nbsp;calls.</p>
+<p>To support nested calls, and a special case of nested calls, 
+recursive calls, we need multiple dictionaries to store information 
+about each procedure and function invocation. And we need those 
+dictionaries organized in a particular way. That’s the reason we need a 
+new memory system. Having this memory system in place is a 
+stepping-stone for executing procedure calls, which we will implement in
+ future articles.
+<br>
+<br></p>
+<p>3. <em>What does the new memory system look&nbsp;like?</em></p>
+<p>At its core, the new memory system is a stack data structure that 
+holds dictionary-like objects as its elements. This stack is called the “<strong><em>call stack</em></strong>” because it’s used to track what procedure/function call is being currently executed. The <em>call stack</em> is also known as the run-time stack, execution stack, program stack, or just “the stack”. The dictionary-like objects that the <em>call stack</em> holds are called <strong><em>activation records</em></strong>. You may know them by another name: “stack frames”, or just&nbsp;“frames”.</p>
+<p>Let’s go into more detail about the <em>call stack</em> and <em>activation records</em>.</p>
+<p>What is a <strong><em>stack</em></strong>? A <strong><em>stack</em></strong> is a data structure that is based on a “<em>last-in-first-out</em>” policy (<em><span class="caps">LIFO</span></em>),
+ which means that the most recent item added to the stack is the first 
+one that comes out. It’s like a collection of plates where you put 
+(“push”) a plate on the top of the plate stack and, if you need to take a
+ plate, you take one off the top of the plate stack (you “pop” 
+the&nbsp;plate):</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/lsbasi_part17_stackofplates.png" width="180"></p>
+<p>Our stack implementation will have the following&nbsp;methods:</p>
+<p>- <em>push</em> (to push an item onto the&nbsp;stack)</p>
+<p>- <em>pop</em> (to pop an item off the&nbsp;stack)</p>
+<p>- <em>peek</em> (to return an item at the top of the stack without removing&nbsp;it)</p>
+<p><br>
+And by our convention our stack will be growing&nbsp;upwards:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/lsbasi_part17_stackgrowth.png" width="360"></p>
+<p>How would we implement a stack in code? A very basic implementation could look like&nbsp;this:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Stack</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+
+
+<p>That’s pretty much how our call stack implementation will look as 
+well. We’ll change some variable names to reflect the fact that the <em>call stack</em> will store <em>activation records</em> and add a __<em>str__()</em> method to print the contents of the&nbsp;stack:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CallStack</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_records</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ar</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_records</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_records</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span> <span class="k">for</span> <span class="n">ar</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_records</span><span class="p">))</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">f</span><span class="s1">'CALL STACK</span><span class="se">\n</span><span class="s1">{s}</span><span class="se">\n</span><span class="s1">'</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</pre></div>
+
+
+<p>The __<em>str__()</em> method generates a string representation of the contents of the <em>call stack</em> by iterating over <em>activation records</em> in reverse order and concatenating a string representation of each record to produce the final result. The __<em>str__()</em> method prints the contents in the reverse order so that the standard output shows our stack growing&nbsp;up.</p>
+<p>Now, what is an <strong><em>activation record</em></strong>? For our purposes, an <em>activation record</em>
+ is a dictionary-like object for maintaining information about the 
+currently executing invocation of a procedure or function, and also the 
+program itself. The activation record for a procedure invocation, for 
+example, will contain the current values of its formal parameters and 
+its local&nbsp;variables.</p>
+<p>Let’s take a look at how we will represent <em>activation records</em> in&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ARType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">PROGRAM</span>   <span class="o">=</span> <span class="s1">'PROGRAM'</span>
+
+
+<span class="k">class</span> <span class="nc">ActivationRecord</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">nesting_level</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nesting_level</span> <span class="o">=</span> <span class="n">nesting_level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">members</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">members</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">members</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">'{level}: {type} {name}'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">level</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nesting_level</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="s1">'   {name:&lt;20}: {val}'</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+</pre></div>
+
+
+<p>There are a few things worth&nbsp;mentioning:</p>
+<p>a. The <em>ActivationRecord</em> class constructor takes three&nbsp;parameters:</p>
+<ul>
+<li>
+<p>the <em>name</em> of the activation record (<span class="caps">AR</span> for short); we’ll use a program name as well as a procedure/function name as the name for the corresponding <span class="caps">AR</span></p>
+</li>
+<li>
+<p>the <em>type</em> of the activation record (for example, <span class="caps">PROGRAM</span>); these are defined in a separate enumeration class called <em>ARType (activation record&nbsp;type)</em></p>
+</li>
+<li>
+<p>the <em>nesting_level</em> of the activation record; the nesting level of an <span class="caps">AR</span>
+ corresponds to the scope level of the respective procedure or function 
+declaration plus one; the nesting level will always be set to 1 for 
+programs, which you’ll see&nbsp;shortly</p>
+</li>
+</ul>
+<p>b.  The <em>members</em> dictionary represents memory that will be 
+used for keeping information about a particular invocation of a routine.
+ We’ll cover this in more detail in the next&nbsp;article</p>
+<p>c. The <em>ActivationRecord</em> class implements special <em>__setitem__()</em> and <em>__getitem__()</em>
+ methods to give activation record objects a dictionary-like interface 
+for storing key-value pairs and for accessing values by keys: <em>ar[‘x’] = 7</em> and <em>ar[‘x’]</em></p>
+<p>d. The <em>get()</em> method is another way to get a value by key, but instead of raising an exception, the method will return <em>None</em> if the key doesn’t exist in the <em>members</em> dictionary&nbsp;yet.</p>
+<p>e. The <em>__str__()</em> method returns a string representation of the contents of an activation&nbsp;record</p>
+<p>Let’s see the call stack and activation records in action using a Python&nbsp;shell:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">spi</span> <span class="kn">import</span> <span class="n">CallStack</span><span class="p">,</span> <span class="n">ActivationRecord</span><span class="p">,</span> <span class="n">ARType</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">stack</span> <span class="o">=</span> <span class="n">CallStack</span><span class="p">()</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">stack</span>
+<span class="n">CALL</span> <span class="n">STACK</span>
+
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ar</span> <span class="o">=</span> <span class="n">ActivationRecord</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'Main'</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">ARType</span><span class="o">.</span><span class="n">PROGRAM</span><span class="p">,</span> <span class="n">nesting_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ar</span>
+<span class="mi">1</span><span class="p">:</span> <span class="n">PROGRAM</span> <span class="n">Main</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ar</span><span class="p">[</span><span class="s1">'y'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ar</span>
+<span class="mi">1</span><span class="p">:</span> <span class="n">PROGRAM</span> <span class="n">Main</span>
+   <span class="n">y</span>                   <span class="p">:</span> <span class="mi">7</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">stack</span>
+<span class="n">CALL</span> <span class="n">STACK</span>
+
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">stack</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">stack</span>
+<span class="n">CALL</span> <span class="n">STACK</span>
+<span class="mi">1</span><span class="p">:</span> <span class="n">PROGRAM</span> <span class="n">Main</span>
+   <span class="n">y</span>                   <span class="p">:</span> <span class="mi">7</span>
+
+<span class="o">&gt;&gt;&gt;</span>
+</pre></div>
+
+
+<p><br>
+In the picture below, you can see the description of the contents of the
+ activation record from the interactive session&nbsp;above:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/lsbasi_part17_arcontents.png" width="640"></p>
+<p><em><span class="caps">AR</span>:Main1</em> denotes an activation record for the program named <em>Main</em> at nesting level <em>1</em>.</p>
+<p>Now that we’ve covered the new memory system, let’s answer the following&nbsp;question.</p>
+<p><br>
+4. <em>Why would we want to replace the GLOBAL_MEMORY dictionary with the call stack</em>?</p>
+<p>The reason is to simplify our implementation and to have unified access to global variables defined at the <span class="caps">PROGRAM</span> level as well as to procedure and function parameters and their local&nbsp;variables.</p>
+<p>In the next article we’ll see how it all fits together, but for now let’s get to the <em>Interpreter</em> class changes where we put the <em>call stack</em> and <em>activation records</em> described earlier to good&nbsp;use.</p>
+<p><br>
+<br>
+<em>Here are all the interpreter changes we’re going to make today</em>:</p>
+<p>1. Replace the <em>GLOBAL_MEMORY</em> dictionary with the <em>call&nbsp;stack</em></p>
+<p>2. Update the <em>visit_Program</em> method to use the <em>call stack</em> to push and pop an <em>activation record</em> that will hold the values of global&nbsp;variables</p>
+<p>3. Update the <em>visit_Assign</em> method to store a key-value pair in the activation record at the top of the call&nbsp;stack</p>
+<p>4. Update the <em>visit_Var</em> method to access a value by its name from the activation record at the top of the call&nbsp;stack</p>
+<p>5. Add a <em>log</em> method and update the <em>visit_Program</em> method to use it to print the contents of the <em>call stack</em> when interpreting a&nbsp;program</p>
+<p>Let’s get started, shall&nbsp;we?</p>
+<p>1. First things first, let’s replace the <em>GLOBAL_MEMORY</em> dictionary with our <em>call stack</em> implementation. All we need to do is change the <em>Interpreter</em> constructor from&nbsp;this:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Interpreter</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span> <span class="o">=</span> <span class="p">{}</span>
+</pre></div>
+
+
+<p>to&nbsp;this:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Interpreter</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span> <span class="o">=</span> <span class="n">CallStack</span><span class="p">()</span>
+</pre></div>
+
+
+<p>2. Now, let’s update the <em>visit_Program</em>&nbsp;method:</p>
+<p>Old&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+</pre></div>
+
+
+<p>New&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">program_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="n">ar</span> <span class="o">=</span> <span class="n">ActivationRecord</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">program_name</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">ARType</span><span class="o">.</span><span class="n">PROGRAM</span><span class="p">,</span>
+        <span class="n">nesting_level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</pre></div>
+
+
+<p>Let’s unpack what’s going on in the updated method&nbsp;above:</p>
+<ul>
+<li>
+<p>First, we create an activation record, giving it the name of the program, the <span class="caps">PROGRAM</span> type, and the nesting level&nbsp;1</p>
+</li>
+<li>
+<p>Then we push the activation record onto the call stack; we do this 
+before anything else so that the rest of the interpreter can use the 
+call stack with the single activation record at the top of the stack to 
+store and access global&nbsp;variables</p>
+</li>
+<li>
+<p>Then we evaluate the body of the program as usual. Again, as our 
+interpreter evaluates the body of the program, it uses the activation 
+record at the top of the call stack to store and access 
+global&nbsp;variables</p>
+</li>
+<li>
+<p>Next, right before exiting the <em>visit_Program</em> method, we pop 
+the activation record off the call stack; we don’t need it anymore 
+because at this point the execution of the program by the interpreter is
+ over and we can safely discard the activation record that is no 
+longer&nbsp;used</p>
+</li>
+</ul>
+<p>3. Up next, let’s update the <em>visit_Assign</em> method to store a key-value pair in the activation record at the top of the call&nbsp;stack:</p>
+<p>Old&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_value</span>
+</pre></div>
+
+
+<p>New&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="n">ar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">peek</span><span class="p">()</span>
+    <span class="n">ar</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_value</span>
+</pre></div>
+
+
+<p>In the code above we use the <em>peek()</em> method to get the activation record at the top of the stack (the one that was pushed onto the stack by the <em>visit_Program</em> method) and then use the record to store the value <em>var_value</em> using <em>var_name</em> as a&nbsp;key.</p>
+<p>4. Next, let’s update the <em>visit_Var</em> method to access a value by its name from the activation record at the top of the call&nbsp;stack:</p>
+<p>Old&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GLOBAL_MEMORY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">var_value</span>
+</pre></div>
+
+
+<p>New&nbsp;code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="n">ar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">peek</span><span class="p">()</span>
+    <span class="n">var_value</span> <span class="o">=</span> <span class="n">ar</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">var_value</span>
+</pre></div>
+
+
+<p>Again as you can see, we use the <em>peek()</em> method to get the top (and only) activation record - the one that was pushed onto the stack by the <em>visit_Program</em> method to hold all the global variables and their values -  and then get a value associated with the <em>var_name</em>&nbsp;key.</p>
+<p>5. And the last change in the <em>Interpreter</em> class that we’re going to make is to add a <em>log</em> method and use the <em>log</em> method to print the contents of the call stack when the interpreter evaluates a&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_SHOULD_LOG_STACK</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">program_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">f</span><span class="s1">'ENTER: PROGRAM {program_name}'</span><span class="p">)</span>
+
+    <span class="n">ar</span> <span class="o">=</span> <span class="n">ActivationRecord</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">program_name</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">ARType</span><span class="o">.</span><span class="n">PROGRAM</span><span class="p">,</span>
+        <span class="n">nesting_level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="p">))</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">f</span><span class="s1">'LEAVE: PROGRAM {program_name}'</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="p">))</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</pre></div>
+
+
+<p>The messages will be logged only if the global variable 
+_SHOULD_LOG_STACK is set to true. The variable’s value will be 
+controlled by the “—stack” command line option. First, let’s update the 
+main function and add the “—stack” command line option to turn the 
+logging of the call stack contents on and&nbsp;off:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s1">'SPI - Simple Pascal Interpreter'</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">'inputfile'</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">'Pascal source file'</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">'--scope'</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">'Print scope information'</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">'store_true'</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">'--stack'</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">'Print call stack'</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">'store_true'</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="k">global</span> <span class="n">_SHOULD_LOG_SCOPE</span><span class="p">,</span> <span class="n">_SHOULD_LOG_STACK</span>
+
+    <span class="n">_SHOULD_LOG_SCOPE</span><span class="p">,</span> <span class="n">_SHOULD_LOG_STACK</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">scope</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">stack</span>
+</pre></div>
+
+
+<p><br>
+Now, let’s take our updated interpreter for a test drive. Download the interpreter from <a href="https://github.com/rspivak/lsbasi/tree/master/part17">GitHub</a> and run it with the <em>-h</em> command line option to see available command line&nbsp;options:</p>
+<div class="highlight"><pre><span></span>$ python spi.py -h
+usage: spi.py <span class="o">[</span>-h<span class="o">]</span> <span class="o">[</span>--scope<span class="o">]</span> <span class="o">[</span>--stack<span class="o">]</span> inputfile
+
+SPI - Simple Pascal Interpreter
+
+positional arguments:
+  inputfile   Pascal <span class="nb">source</span> file
+
+optional arguments:
+  -h, --help  show this <span class="nb">help</span> message and <span class="nb">exit</span>
+  --scope     Print scope information
+  --stack     Print call stack
+</pre></div>
+
+
+<p>Download the following sample program from <a href="https://github.com/rspivak/lsbasi/tree/master/part17">GitHub</a> or save it to file&nbsp;part17.pas</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+<span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+   <span class="n">y</span> <span class="o">:=</span> <span class="mi">7</span><span class="o">;</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="mi">3</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Run the interpreter with the <em>part17.pas</em> file as its input 
+file and the “—stack” command line option to see the contents of the 
+call stack as the interpreter executes the source&nbsp;program:</p>
+<div class="highlight"><pre><span></span>$ python spi.py part17.pas --stack
+ENTER: PROGRAM Main
+CALL STACK
+<span class="m">1</span>: PROGRAM Main
+
+
+LEAVE: PROGRAM Main
+CALL STACK
+<span class="m">1</span>: PROGRAM Main
+   y                   : <span class="m">7</span>
+   x                   : <span class="m">30</span>
+</pre></div>
+
+
+<p><br>
+Mission accomplished! We have implemented a new memory system that can 
+support programs, procedure calls, and function calls. And we’ve 
+replaced the interpreter’s current memory system, represented by the <em>GLOBAL_MEMORY</em> dictionary, with the new system based on the call stack and activation&nbsp;records.</p>
+<p><br>
+That’s all for today. In the next article we’ll extend the interpreter 
+to execute procedure calls using the call stack and activation records. 
+This will be a huge milestone for us. So stay tuned and see you 
+next&nbsp;time!</p>
+<p><br>
+<em>Resources used in preparation for this article (some links are affiliate&nbsp;links):</em></p>
+<ol>
+<li><a target="_blank" href="https://www.amazon.com/gp/product/193435645X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=193435645X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=5d5ca8c07bff5452ea443d8319e7703d">Language Implementation Patterns: Create Your Own Domain-Specific and General Programming Languages (Pragmatic Programmers)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/ir_003" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></li>
+<li><a target="_blank" href="https://www.amazon.com/gp/product/0470177071/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0470177071&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=542d1267e34a529e0f69027af20e27f3">Writing Compilers and Interpreters: A Software Engineering Approach</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/ir" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></li>
+<li><a target="_blank" href="https://www.amazon.com/gp/product/0124104096/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0124104096&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=8db1da254b12fe6da1379957dda717fc">Programming Language Pragmatics, Fourth Edition</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/ir_004" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></li>
+<li><a target="_blank" href="https://www.amazon.com/gp/product/0814420303/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0814420303&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=bee8bb0ac4fa2fb1ce587e093b6cfe6c">Lead with a Story</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/ir_002" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></li>
+<li>A <a href="https://en.wikipedia.org/wiki/John_Stephen_Akhwari">Wikipedia article</a> on John Stephen&nbsp;Akhwari</li>
+</ol>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app231" name="dsq-app231" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/a.html" style="height: 1274px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-17-call-stack-and-activation-records';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part17/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2017%20Call%20Stack%20and%20Activation%C2%A0Records%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>

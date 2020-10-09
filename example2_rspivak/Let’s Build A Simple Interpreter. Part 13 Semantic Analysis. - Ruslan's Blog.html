@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part 13: Semantic&nbsp;Analysis. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part13/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="Anything worth doing is worth&nbsp;overdoing. Before doing a deep dive into the topic of scopes, I’d like to make a “quick” detour and talk in more detail about symbols, symbol tables, and semantic analysis. In the spirit of “Anything worth doing is worth overdoing”, I hope you’ll …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part 13: Semantic&nbsp;Analysis.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part13/">
+        <meta property="og:description" content="Anything worth doing is worth&nbsp;overdoing. Before doing a deep dive into the topic of scopes, I’d like to make a “quick” detour and talk in more detail about symbols, symbol tables, and semantic analysis. In the spirit of “Anything worth doing is worth overdoing”, I hope you’ll …">
+        <meta property="article:published_time" content="2017-04-27">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/embed.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/a_data/lounge_002.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/count.js"></script><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part13/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part 13: Semantic&nbsp;Analysis.">
+                        Let’s Build A Simple Interpreter. Part 13: Semantic&nbsp;Analysis.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2017-04-27T01:00:00-04:00"> Thu, April 27, 2017</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <blockquote>
+<p><em>Anything worth doing is worth&nbsp;overdoing.</em></p>
+</blockquote>
+<p>Before doing a deep dive into the topic of scopes, I’d like to make a
+ “quick” detour and talk in more detail about symbols, symbol tables, 
+and semantic analysis. In the spirit of <em>“Anything worth doing is worth overdoing”</em>,
+ I hope you’ll find the material useful for building a more solid 
+foundation before tackling nested scopes.  Today we will continue to 
+increase our knowledge of how to write interpreters and compilers. You 
+will see that some of the material covered in this article has parts 
+that are much more extended versions of what you saw in <a href="https://ruslanspivak.com/lsbasi-part11/">Part 11</a>, where we discussed symbols and symbol&nbsp;tables.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img01.png"></p>
+<p><br></p>
+<p>Okay, let’s get&nbsp;started!</p>
+<p><br></p>
+<h2 id="introduction-to-semantic-analysis">Introduction to semantic&nbsp;analysis</h2>
+<p>While our Pascal program can be grammatically correct and the parser can successfully build an <em>abstract syntax tree</em>, the program still can contain some pretty serious errors. To catch those errors we need to use the <em>abstract syntax tree</em> and the information from the <em>symbol table</em>.</p>
+<p>Why can’t we check for those errors during parsing, that is, during <em>syntax analysis</em>? Why do we have to build an <em><span class="caps">AST</span></em> and something called the symbol table to do&nbsp;that?</p>
+<p>In a nutshell, for convenience and the separation of concerns. By 
+moving those extra checks into a separate phase, we can focus on one 
+task at a time without making our parser and interpreter do more work 
+than they are supposed to&nbsp;do.</p>
+<p>When the parser has finished building the <span class="caps">AST</span>,
+ we know that the program is grammatically correct; that is, that its 
+syntax is correct according to our grammar rules and now we can 
+separately focus on checking for errors that require additional context 
+and information that the parser did not have at the time of building the
+ <span class="caps">AST</span>.
+To make it more concrete, let’s take a look at the following Pascal assignment&nbsp;statement:</p>
+<div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+</pre></div>
+
+
+<p><br>
+The parser will handle it all right because, grammatically, the 
+statement is correct (according to our previously defined grammar rules 
+for assignment statements and expressions). But that’s not the end of 
+the story yet, because Pascal has a requirement that variables must be 
+declared with their corresponding types before they are used. How does 
+the parser know whether <strong>x</strong> and <strong>y</strong> have been declared&nbsp;yet?</p>
+<p>Well, it doesn’t and that’s why we need a separate semantic analysis 
+phase to answer the question (among many others) of whether the 
+variables have been declared prior to their&nbsp;use.</p>
+<p>What is <em><strong>semantic analysis</strong></em>? Basically, it’s 
+just a process to help us determine whether a program makes sense, and 
+that it has meaning, according to a language&nbsp;definition.</p>
+<p>What does it even mean for a program to make sense? It depends in 
+large part on a language definition and language&nbsp;requirements.</p>
+<p>Pascal language and, specifically, Free Pascal’s compiler, has 
+certain requirements that, if not followed in a program, would lead to 
+an error from the <em>fpc</em> compiler indicating that the program 
+doesn’t “make sense”, that it is incorrect, even though the syntax might
+ look okay. Here are some of those&nbsp;requirements:</p>
+<ul>
+<li>The variables must be declared before they are&nbsp;used</li>
+<li>The variables must have matching types when used in arithmetic expressions (this is a big part of <em>semantic analysis</em> called <em>type checking</em> that we’ll cover&nbsp;separately)</li>
+<li>There should be no duplicate declarations (Pascal prohibits, for 
+example, having a local variable in a procedure with the same name as 
+one of the procedure’s formal&nbsp;parameters)</li>
+<li>A name reference in a call to a procedure must refer to the actual 
+declared procedure (It doesn’t make sense in Pascal if, in the procedure
+ call <strong>foo()</strong>, the name <em>foo</em> refers to a variable foo of a primitive type <span class="caps">INTEGER</span>)</li>
+<li>A procedure call must have the correct number of arguments and the 
+arguments’ types must match those of formal parameters in the 
+procedure&nbsp;declaration</li>
+</ul>
+<p>It is much easier to enforce the above requirements when we have 
+enough context about the program, namely, an intermediate representation
+ in the form of an <span class="caps">AST</span> that we can walk and 
+the symbol table with information about different program entities like 
+variables, procedures, and&nbsp;functions.</p>
+<p>After we implement the semantic analysis phase, the structure of our Pascal interpreter will look something like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img03.png" width="400"></p>
+<p>From the picture above you can see that our lexer will get source 
+code as an input, transform that into tokens that the parser will 
+consume and use to verify that the program is grammatically correct, and
+ then it will generate an abstract syntax tree that our new semantic 
+analysis phase will use to enforce different Pascal language 
+requirements. During the semantic analysis phase, the semantic analyzer 
+will also build and use the symbol table. After the semantic analysis, 
+our interpreter will take the <span class="caps">AST</span>, evaluate the program by walking the <span class="caps">AST</span>, and produce the program&nbsp;output.</p>
+<p>Let’s get into the details of the semantic analysis&nbsp;phase.</p>
+<h2 id="symbols-and-symbol-tables">Symbols and symbol&nbsp;tables</h2>
+<p>In the following section, we’re going to discuss how to implement 
+some of the semantic checks and how to build the symbol table: in other 
+words, we are going to discuss how to perform a <em>semantic analysis</em> of our Pascal programs.
+Keep in mind that even though <em>semantic analysis</em> sounds fancy and deep, it’s just another step after parsing our program and creating an <span class="caps">AST</span>
+ to check the source program for some additional errors that the parser 
+couldn’t catch due to a lack of additional information&nbsp;(context).</p>
+<p>Today we’re going to focus on the following two <em>static semantic checks</em>*:</p>
+<ol>
+<li>That variables are declared before they are&nbsp;used</li>
+<li>That there are no duplicate variable&nbsp;declarations</li>
+</ol>
+<blockquote>
+<p>*<span class="caps">ASIDE</span>: <em>Static semantic checks</em> are
+ the checks that we can make before interpreting (evaluating) the 
+program, that is, before calling the interpret method on an instance of 
+the Interpreter class. All the Pascal requirements mentioned before can 
+be enforced with <em>static semantic checks</em> by walking an <span class="caps">AST</span> and using information from the symbol&nbsp;table.</p>
+<p><em>Dynamic semantic checks</em>, on the other hand, would require 
+checks to be performed during the interpretation (evaluation) of the 
+program. For example, a check that there is no division by zero, and 
+that an array index is not out of bounds would be a <em>dynamic semantic check</em>. Our focus today is on <em>static semantic checks</em>.</p>
+</blockquote>
+<p>Let’s start with our first check and make sure that in our Pascal 
+programs variables are declared before they are used. Take a look at the
+ following syntactically correct but semantically incorrect program 
+(ugh… too many hard to pronounce words in one sentence.&nbsp;:)</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="n">x</span> <span class="o">:=</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>The program above has one variable declaration and two variable references. You can see that in the picture&nbsp;below:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img04.png" width="400"></p>
+<p>Let’s actually verify that our program is syntactically correct and 
+that our parser doesn’t throw an error when parsing it. As they say, 
+trust but verify. :) Download <a href="https://github.com/rspivak/lsbasi/blob/master/part13/spi.py">spi.py</a>, fire off a Python shell, and see for&nbsp;yourself:</p>
+<div class="highlight"><pre><span></span>&gt;&gt;&gt; from spi import Lexer, Parser
+&gt;&gt;&gt; <span class="nv">text</span> <span class="o">=</span> <span class="s2">"""</span>
+<span class="s2">program Main;</span>
+<span class="s2">   var x : integer;</span>
+
+<span class="s2">begin</span>
+<span class="s2">    x := y;</span>
+<span class="s2">end.</span>
+<span class="s2">"""</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">lexer</span> <span class="o">=</span> Lexer<span class="o">(</span>text<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">parser</span> <span class="o">=</span> Parser<span class="o">(</span>lexer<span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">tree</span> <span class="o">=</span> parser.parse<span class="o">()</span>
+&gt;&gt;&gt;
+</pre></div>
+
+
+<p>You see? No errors. We can even generate an <span class="caps">AST</span> diagram for that program using <a href="https://github.com/rspivak/lsbasi/blob/master/part13/genastdot.py">genastdot.py</a>. First, save the source code into a file, let’s say semanticerror01.pas, and run the following&nbsp;commands:</p>
+<div class="highlight"><pre><span></span>$ python genastdot.py semanticerror01.pas &gt; semanticerror01.dot
+$ dot -Tpng -o ast.png semanticerror01.dot
+</pre></div>
+
+
+<p>Here is the <span class="caps">AST</span>&nbsp;diagram:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img05.png"></p>
+<p>So, it is a grammatically (syntactically) correct program, but the 
+program doesn’t make sense because we don’t even know what type the 
+variable <strong>y</strong> has (that’s why we need declarations) and if it will make sense to assign <strong>y</strong> to <strong>x</strong>. What if <strong>y</strong> is a string, does it make sense to assign a string to an integer? It does not, at least not in&nbsp;Pascal.</p>
+<p>So the program above has a semantic error because the variable <strong>y</strong>
+ is not declared and we don’t know its type. In order for us to be able 
+to catch errors like that, we need to learn how to check that variables 
+are declared before they are used. So let’s learn how to do&nbsp;it.</p>
+<p>Let’s take a closer look at the following syntactically and semantically correct sample&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<ul>
+<li>It has two variable declarations: <strong>x</strong> and <strong>y</strong></li>
+<li>It also has three variable references (<strong>x</strong>, another <strong>x</strong>, and <strong>y</strong>) in the assignment statement <strong>x := x + y</strong>;</li>
+</ul>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img06.png" width="440"></p>
+<p>The program is grammatically correct, all the variables are declared,
+ and we can see that adding two integers and assigning the result to an 
+integer makes perfect sense. That’s great, but how do we 
+programmatically check that the variables (variable references) <strong>x</strong> and <strong>y</strong> in the assignment statement <strong>x := x +y;</strong> have been&nbsp;declared?</p>
+<p>We can do this in several steps by implementing the following&nbsp;algorithm:</p>
+<ol>
+<li>Go over all variable&nbsp;declarations</li>
+<li>For every variable declaration you encounter, collect all necessary information about the declared&nbsp;variable</li>
+<li>Store the collected information in some stash for future reference by using the variable’s name as a&nbsp;key</li>
+<li>When you see a variable reference, such as in the assignment statement <strong>x := x + y</strong>,
+  search the stash by the variable’s name to see if the stash has any 
+information about the variable. If it does, the variable has been 
+declared. If it doesn’t, the variable hasn’t been declared yet, which is
+ a semantic&nbsp;error.</li>
+</ol>
+<p>This is what a flowchart of our algorithm could look&nbsp;like:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img07.png" width="800"></p>
+<p>Before we can implement the algorithm, we need to answer several&nbsp;questions:</p>
+<ul>
+<li>A. What information about variables do we need to&nbsp;collect?</li>
+<li>B. Where and how should we store the collected&nbsp;information?</li>
+<li>C. How do we implement the “go over all variable declarations”&nbsp;step?</li>
+</ul>
+<p>Our plan of attack will be the&nbsp;following:</p>
+<ol>
+<li>Figure out answers to the questions A, B, and C&nbsp;above.</li>
+<li>Use the answers to A, B, and C to implement the steps in the 
+algorithm for our first static semantic check: a check that variables 
+are declared before they are&nbsp;used.</li>
+</ol>
+<p>Okay, let’s get&nbsp;started.</p>
+<p><em><strong>Let’s find an answer to the question “What information about variables do we need to&nbsp;collect?”</strong></em></p>
+<p>So, what necessary information do we need to collect about a variable? Here are the important&nbsp;parts:</p>
+<ul>
+<li><em>Name</em> (we need to know the name of a declared variable because later we will be looking up variables by their&nbsp;names)</li>
+<li><em>Category</em> (we need to know what kind of an identifier it is: <em>variable</em>, <em>type</em>, <em>procedure</em>, and so&nbsp;on)</li>
+<li><em>Type</em> (we’ll need this information for type&nbsp;checking)</li>
+</ul>
+<p>Symbols will hold that information (name, category, and type) about our variables. What’s a <em>symbol</em>? A <strong>symbol</strong> is an identifier of some program entity like a variable, subroutine, or built-in&nbsp;type.</p>
+<p>In the following sample program we have two variable declarations that we will use to create two variable symbols: <strong>x</strong>, and <strong>y</strong>.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img08.png" width="440"></p>
+<p>In the code, we’ll represent symbols with a class called <em>Symbol</em> that has fields <em>name</em> and <em>type</em>&nbsp;:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Symbol</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+</pre></div>
+
+
+<p>As you can see, the class takes the <em>name</em> parameter and an optional <em>type</em> parameter (not all symbols have type information associated with them, as we’ll see&nbsp;shortly).</p>
+<p>What about the <em>category</em>? We will encode <em>category</em> into the class name. Alternatively, we could store the category of a symbol in the dedicated <em>category</em> field of the <em>Symbol</em> class as&nbsp;in:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Symbol</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">category</span> <span class="o">=</span> <span class="n">category</span>
+</pre></div>
+
+
+<p>However, it’s more explicit to create a hierarchy of classes where the name of the class indicates its&nbsp;category.</p>
+<p>Up until now I’ve sort of skirted around one topic, that of built-in types. If you look at our sample program&nbsp;again:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>You can see that variables <strong>x</strong> and <strong>y</strong> are declared as <em>integers</em>. What is the <em>integer</em> type? The integer type is another kind of symbol, a <em>built-in type symbol</em>.
+ It’s called built-in because it doesn’t have to be declared explicitly 
+in a Pascal program. It’s our interpreter’s responsibility to declare 
+that type symbol and make it available to&nbsp;programmers:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img09.png" width="500"></p>
+<p>We are going to make a separate class for built-in types called <em>BuiltinTypeSymbol</em>. Here is the class definition for our built-in&nbsp;types:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">BuiltinTypeSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"&lt;{class_name}(name='{name}')&gt;"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">class_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+</pre></div>
+
+
+<p>The class <em>BuiltinTypeSymbol</em> inherits from the <em>Symbol</em> class, and its constructor requires only the <em>name</em> of the type, like <em>integer</em> or <em>real</em>. The ‘builtin type’ category is encoded in the class name, as we discussed earlier, and the <em>type</em> parameter from the base class is automatically set to <em>None</em> when we create a new instance of the <em>BuiltinTypeSymbol</em>&nbsp;class.</p>
+<blockquote>
+<p><span class="caps">ASIDE</span></p>
+<p>The double underscore or <em>dunder</em> (as in “<strong>D</strong>ouble <strong><span class="caps">UNDER</span></strong>score”) methods <em>__str__</em> and <em>__repr__</em>
+ are special Python methods. We’ve defined them to have a nice formatted
+ message when we print a symbol object to standard&nbsp;output.</p>
+</blockquote>
+<p>By the way, built-in types are the reason why the type parameter in the Symbol class constructor is an optional&nbsp;parameter.</p>
+<p>Here is our symbol class hierarchy so&nbsp;far:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img10.png"></p>
+<p>Let’s play with the builtin types in a Python shell. Download the <a href="https://github.com/rspivak/lsbasi/blob/master/part13/spi.py">interpreter file</a>
+ and save it as spi.py; launch a python shell from the same directory 
+where you saved the spi.py file, and play with the class we’ve just 
+defined&nbsp;interactively:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import BuiltinTypeSymbol
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'integer'</span><span class="o">)</span>
+&gt;&gt;&gt; int_type
+&lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'integer'</span><span class="o">)</span>&gt;
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">real_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'real'</span><span class="o">)</span>
+&gt;&gt;&gt; real_type
+&lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'real'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>That’s all there is to built-in type symbols for now. Now back to our variable&nbsp;symbols.</p>
+<p>How can we represent them in code?  Let’s create a <em>VarSymbol</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">VarSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"&lt;{class_name}(name='{name}', type='{type}')&gt;"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">class_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+</pre></div>
+
+
+<p>In this class, we made both the <em>name</em> and the <em>type</em> parameters required and the class name <em>VarSymbol</em> clearly indicates that an instance of the class will identify a variable symbol (the category is <em>variable</em>). The <em>type</em> parameter is an instance of the <em>BuiltinTypeSymbol</em>&nbsp;class.</p>
+<p>Let’s go back to the interactive Python shell to see how we can 
+manually construct instances of our variable symbols now that we know 
+how to construct <em>BuiltinTypeSymbol</em> class&nbsp;instances:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from spi import BuiltinTypeSymbol, VarSymbol
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'integer'</span><span class="o">)</span>
+&gt;&gt;&gt; <span class="nv">real_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'real'</span><span class="o">)</span>
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">var_x_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'x'</span>, int_type<span class="o">)</span>
+&gt;&gt;&gt; var_x_symbol
+&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'integer'</span><span class="o">)</span>&gt;
+&gt;&gt;&gt;
+&gt;&gt;&gt; <span class="nv">var_y_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'y'</span>, real_type<span class="o">)</span>
+&gt;&gt;&gt; var_y_symbol
+&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'real'</span><span class="o">)</span>&gt;
+&gt;&gt;&gt;
+</pre></div>
+
+
+<p>As you can see, we first create an instance of the built-in type symbol and then pass it as a second parameter to <em>VarSymbol</em>‘s
+ constructor: variable symbols must have both a name and type associated
+ with them as you’ve seen in various variable declarations like <strong>var x :&nbsp;integer;</strong></p>
+<p>And here is the complete hierarchy of symbols we’ve defined so far, in visual&nbsp;form:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img11.png"></p>
+<p><br>
+<strong><em>Okay, now onto answering the question “Where and how should we store the collected&nbsp;information?”</em></strong></p>
+<p>Now that we have all the symbols representing all our variable 
+declarations, where should we store those symbols so that we can search 
+for them later when we encounter variable references&nbsp;(names)?</p>
+<p>The answer is, as you probably already know, in <em>the symbol table</em>.</p>
+<p>What is a <em>symbol table</em>? A <strong>symbol table</strong> is 
+an abstract data type for tracking various symbols in source code. Think
+ of it as a dictionary where the key is the symbol’s name and the value 
+is an instance of the symbol class (or one of its subclasses). To 
+represent the symbol table in code we’ll use a dedicated class for it 
+aptly named <em>SymbolTable</em>. :) To store symbols in the symbol table we’ll add the <em>insert</em> method to our symbol table class. The method <em>insert</em> will take a symbol as a parameter and store it internally in the <em>_symbols</em> ordered dictionary using the symbol’s name as a key and the symbol instance as a&nbsp;value:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">symtab_header</span> <span class="o">=</span> <span class="s1">'Symbol table contents'</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">,</span> <span class="n">symtab_header</span><span class="p">,</span> <span class="s1">'_'</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">symtab_header</span><span class="p">)]</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">'</span><span class="si">%7s</span><span class="s1">: </span><span class="si">%r</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Insert: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p>Let’s manually populate our symbol table for the following sample 
+program. Because we don’t know how to search our symbol table yet, our 
+program won’t contain any variable references, only 
+variable&nbsp;declarations:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab1</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Download <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab01.py">symtab01.py</a>, which contains our new <em>SymbolTable</em> class and run it on the command line. This is what the output looks like for our program&nbsp;above:</p>
+<div class="highlight"><pre><span></span>$ python symtab01.py
+Insert: INTEGER
+Insert: x
+Insert: y
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p><br>
+And now let’s build and populate the symbol table manually in a Python&nbsp;shell:</p>
+<div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; from symtab01 import SymbolTable, BuiltinTypeSymbol, VarSymbol
+&gt;&gt;&gt; <span class="nv">symtab</span> <span class="o">=</span> SymbolTable<span class="o">()</span>
+&gt;&gt;&gt; <span class="nv">int_type</span> <span class="o">=</span> BuiltinTypeSymbol<span class="o">(</span><span class="s1">'INTEGER'</span><span class="o">)</span>
+&gt;&gt;&gt; <span class="c1"># now let's store the built-in type symbol in the symbol table</span>
+...
+&gt;&gt;&gt; symtab.insert<span class="o">(</span>int_type<span class="o">)</span>
+Insert: INTEGER
+&gt;&gt;&gt;
+&gt;&gt;&gt; symtab
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+&gt;&gt;&gt; <span class="nv">var_x_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'x'</span>, int_type<span class="o">)</span>
+&gt;&gt;&gt; symtab.insert<span class="o">(</span>var_x_symbol<span class="o">)</span>
+Insert: x
+&gt;&gt;&gt; symtab
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+&gt;&gt;&gt; <span class="nv">var_y_symbol</span> <span class="o">=</span> VarSymbol<span class="o">(</span><span class="s1">'y'</span>, int_type<span class="o">)</span>
+&gt;&gt;&gt; symtab.insert<span class="o">(</span>var_y_symbol<span class="o">)</span>
+Insert: y
+&gt;&gt;&gt; symtab
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+&gt;&gt;&gt;
+</pre></div>
+
+
+<p><br>
+At this point we have answers to two questions that we asked&nbsp;earlier:</p>
+<ul>
+<li>
+<p>A. What information about variables do we need to&nbsp;collect?</p>
+<p>Name, category, and type. And we use symbols to hold that&nbsp;information.</p>
+</li>
+<li>
+<p>B. Where and how should we store the collected&nbsp;information?</p>
+<p>We store collected symbols in the symbol table by using its insert&nbsp;method.</p>
+</li>
+</ul>
+<p><br>
+Now let’s find the answer to our third question: <em><strong>‘How do we implement the “go over all variable declarations”&nbsp;step?’</strong></em></p>
+<p>This is a really easy one. Because we already have an <span class="caps">AST</span> built by our parser, we just need to create a new <span class="caps">AST</span> visitor class that will be responsible for walking over the tree and doing different actions when visiting <em>VarDecl</em> <span class="caps">AST</span>&nbsp;nodes!</p>
+<p>Now we have answers to all three&nbsp;questions:</p>
+<ul>
+<li>
+<p>A. What information about variables do we need to&nbsp;collect?</p>
+<p>Name, category, and type. And we use symbols to hold that&nbsp;information.</p>
+</li>
+<li>
+<p>B. Where and how should we store the collected&nbsp;information?</p>
+<p>We store collected symbols in the symbol table by using its <em>insert</em>&nbsp;method.</p>
+</li>
+<li>
+<p>C. How do we implement the “go over all variable declarations”&nbsp;step?</p>
+<p>We will create a new <span class="caps">AST</span> visitor that will do some actions on visiting <em>VarDecl</em> <span class="caps">AST</span>&nbsp;nodes.</p>
+</li>
+</ul>
+<p><br>
+Let’s create a new tree visitor class and give it the name <em>SemanticAnalyzer</em>. Take a look the following sample program, for&nbsp;example:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab2</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>To be able to analyze the program above, we don’t need to implement all <em>visit_xxx</em> methods, just a subset of them. Below is the skeleton for the <em>SemanticAnalyzer</em> class with enough <em>visit_xxx</em> methods to be able to successfully walk the <span class="caps">AST</span> of the sample program&nbsp;above:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SemanticAnalyzer</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span> <span class="o">=</span> <span class="n">SymbolTable</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">visit_Block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">declaration</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">declarations</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">declaration</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">compound_statement</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_Compound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">visit_NoOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="c1">#  Actions go here</span>
+        <span class="k">pass</span>
+</pre></div>
+
+
+<p>Now, we have all the pieces to implement the first three steps of our
+ algorithm for our first static semantic check, the check that verifies 
+that variables are declared before they are&nbsp;used.</p>
+<p>Here are the steps of the algorithm&nbsp;again:</p>
+<ol>
+<li>Go over all variable&nbsp;declarations</li>
+<li>For every variable declaration you encounter, collect all necessary information about the declared&nbsp;variable</li>
+<li>Store the collected information in some stash for future references by using the variable’s name as a&nbsp;key</li>
+<li>When you see a variable reference such as in the assignment statement <strong>x := x + y</strong>,
+  search the stash by the variable’s name to see if the stash has any 
+information about the variable. If it does, the variable has been 
+declared. If it doesn’t, the variable hasn’t been declared yet, which is
+ a semantic&nbsp;error.</li>
+</ol>
+<p><br>
+Let’s implement those steps. Actually, the only thing that we need to do is fill in the <em>visit_VarDecl</em> method of the <em>SemanticAnalyzer</em> class. Here it is, filled&nbsp;in:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="c1"># For now, manually create a symbol for the INTEGER built-in type</span>
+    <span class="c1"># and insert the type symbol in the symbol table.</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p>If you look at the contents of the method, you can see that it actually incorporates all three&nbsp;steps:</p>
+<ol>
+<li>The method will be called for <em>every</em> variable declaration once we’ve invoked the <em>visit</em> method of the <em>SemanticAnalyzer</em> instance. That covers Step 1 of the algorithm: <em>“Go over all variable&nbsp;declarations”</em></li>
+<li>For every variable declaration, the method <em>visit_VarDecl</em> will collect the necessary information and create a variable symbol instance. That covers Step 2 of the algorithm: <em>“For every variable declaration you encounter, collect all necessary information about the declared&nbsp;variable”</em></li>
+<li>The method <em>visit_VarDecl</em> will store the collected information about the variable declaration in the symbol table using the symbol table’s <em>insert</em> method. This covers Step 3 of the algorithm: <em>“Store the collected information in some stash for future references by using the variable’s name as a&nbsp;key”</em></li>
+</ol>
+<p>To see all of those steps in action, download file <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab02.py">symtab02.py</a> and study its source code first. Then run it on the command line and inspect the&nbsp;output:</p>
+<div class="highlight"><pre><span></span>$ python symtab02.py
+Insert: INTEGER
+Insert: x
+Insert: INTEGER
+Insert: y
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>You might have noticed that there are two lines that say <em>Insert: <span class="caps">INTEGER</span></em>.
+ We will fix this situation in the following section where we’ll discuss
+ the implementation of the final step (Step 4) of the semantic 
+check&nbsp;algorithm.</p>
+<p><br>
+Okay, let’s implement Step 4 of our algorithm. Here is an updated 
+version of Step 4 to reflect the introduction of symbols and the symbol 
+table: <em>When you see a variable reference (name) such as in the assignment statement <strong>x := x + y</strong>,
+  search the symbol table by the variable’s name to see if the table has
+ a variable symbol associated with the name. If it does, the variable 
+has been declared. If it doesn’t, the variable hasn’t been declared yet,
+ which is a semantic&nbsp;error.</em></p>
+<p>To implement Step 4, we need to make some changes to the symbol table and semantic&nbsp;analyzer:</p>
+<ol>
+<li>We need to add a method to our symbol table that will be able to look up a symbol by&nbsp;name.</li>
+<li>We need to update our semantic analyzer to look up a name in the 
+symbol table every time it encounters a variable&nbsp;reference.</li>
+</ol>
+<p>First, let’s update our <em>SymbolTable</em> class by adding the <em>lookup</em> method that will be responsible for searching for a symbol by name. In other words, the <em>lookup</em>
+ method will be responsible for resolving a variable name (a variable 
+reference) to its declaration. The process of mapping a variable 
+reference to its declaration is called <strong>name resolution</strong>. And here is our <em>lookup</em> method that does just that, <em>name resolution</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+    <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p>The method takes a symbol name as a parameter and returns a symbol if it finds it or <em>None</em> if it doesn’t. As simple as&nbsp;that.</p>
+<p>While we’re at it, let’s also update our <em>SymbolTable</em> class to initialize built-in types. We’ll do that by adding a method <em>_init_builtins</em> and calling it in the <em>SymbolTable</em>‘s constructor. The <em>_init_builtins</em> method will insert a type symbol for <em>integer</em> and a type symbol for <em>real</em> into the symbol&nbsp;table.</p>
+<p>Here is the full code for our updated <em>SymbolTable</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_builtins</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_init_builtins</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'REAL'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">symtab_header</span> <span class="o">=</span> <span class="s1">'Symbol table contents'</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">,</span> <span class="n">symtab_header</span><span class="p">,</span> <span class="s1">'_'</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">symtab_header</span><span class="p">)]</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">'</span><span class="si">%7s</span><span class="s1">: </span><span class="si">%r</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Insert: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+
+    <span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p><br>
+Now that we have built-in type symbols and the <em>lookup</em> method to search our symbol table when we encounter variable names (and other names like type names), let’s update the <em>SemanticAnalyzer</em>‘s <em>visit_VarDecl</em> method and replace the two lines where we were manually creating the <span class="caps">INTEGER</span> built-in type symbol and manually inserting it into the symbol table with code to look up the <span class="caps">INTEGER</span> type&nbsp;symbol.</p>
+<p>The change will also fix the issue with that double output of the <em>Insert: <span class="caps">INTEGER</span></em> line we’ve seen&nbsp;before.</p>
+<p>Here is the <em>visit_VarDecl</em> method before the&nbsp;change:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="c1"># For now, manually create a symbol for the INTEGER built-in type</span>
+    <span class="c1"># and insert the type symbol in the symbol table.</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p>and after the&nbsp;change:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Let’s apply the changes to the familiar Pascal program that has only variable&nbsp;declarations:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab3</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Download the <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab03.py">symtab03.py</a> file that has all the changes we’ve just discussed, run it on the command line, and see that there is no longer a duplicate <em>Insert: <span class="caps">INTEGER</span></em> line in the program output any&nbsp;more:</p>
+<div class="highlight"><pre><span></span>$ python symtab03.py
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: x
+Lookup: INTEGER
+Insert: y
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>You can also see in the output above that our semantic analyzer looks up the <em><span class="caps">INTEGER</span></em> built-in type twice: first for the declaration of the variable <strong>x</strong>, and the second time for the declaration of the variable <strong>y</strong>.</p>
+<p><br>
+Now let’s switch our attention to variable references (names) and how we
+ can resolve a variable name, let’s say in an arithmetic expression, to 
+its variable declaration (variable symbol). Let’s take a look at the 
+following sample program, for example, that has an assignment statement <strong>x := x + y;</strong> with three variable references: <strong>x</strong>, another <strong>x</strong>, and <strong>y</strong>:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab4</span><span class="o">;</span>
+    <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>We already have the <em>lookup</em> method in our symbol table 
+implementation. What we need to do now is extend our semantic analyzer 
+so that every time it encounters a variable reference it would search 
+the symbol table by the variable reference name using the symbol table’s
+ <em>lookup</em> name. What method of the <em>SemanticAnalyzer</em> gets called every time a variable reference is encountered when the analyzer walks the <span class="caps">AST</span>? It’s the method <em>visit_Var</em>. Let’s add it to our class. It’s very simple: all it does is look up the variable symbol by&nbsp;name:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+Because our sample program <em>SymTab4</em> has an assignment statement with arithmetic addition in its right hand side, we need to add two more methods to our <em>SemanticAnalyzer</em> so that it could actually walk the <span class="caps">AST</span> of the <em>SymTab4</em> program and call the <em>visit_Var</em> method for all <em>Var</em> nodes. The methods we need to add are <em>visit_Assign</em> and <em>visit_BinOp</em>. They are nothing new: you’ve seen these methods before. Here they&nbsp;are:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="c1"># right-hand side</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="c1"># left-hand side</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_BinOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+You can find the full source code with the changes we’ve just discussed in the file <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab04.py">symtab04.py</a>. Download the file, run it on the command line, and inspect the output produced for our sample program <em>SymTab4</em> with an assignment&nbsp;statement.</p>
+<p>Here is the output on my&nbsp;laptop:</p>
+<div class="highlight"><pre><span></span>$ python symtab04.py
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: x
+Lookup: INTEGER
+Insert: y
+Lookup: x
+Lookup: y
+Lookup: x
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>Spend some time analyzing the output and making sure you understand how and why the output is generated in that&nbsp;order.</p>
+<p>At this point, we have implemented all of the steps of our algorithm 
+for a static semantic check that verifies that all variables in the 
+program are declared before they are&nbsp;used!</p>
+<h3 id="semantic-errors">Semantic&nbsp;errors</h3>
+<p>So far we’ve looked at the programs that had their variables 
+declared, but what if our program has a variable reference that doesn’t 
+resolve to any declaration; that is, it’s not declared? That’s a 
+semantic error and we need to extend our semantic analyzer to signal 
+that error.
+<br></p>
+<p>Take a look at the following semantically incorrect program, where the variable <strong>y</strong> is not declared but used in the assignment&nbsp;statement:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab5</span><span class="o">;</span>
+    <span class="k">var</span> <span class="n">x</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+<span class="k">begin</span>
+    <span class="n">x</span> <span class="o">:=</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>To signal the error, we need to modify our <em>SemanticAnalyzer</em>‘s <em>visit_Var</em> method to throw an exception if the <em>lookup</em> method cannot resolve a name to a symbol and returns <em>None</em>. Here is the updated code for <em>visit_Var</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">var_symbol</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="s2">"Error: Symbol(identifier) not found '</span><span class="si">%s</span><span class="s2">'"</span> <span class="o">%</span> <span class="n">var_name</span>
+        <span class="p">)</span>
+</pre></div>
+
+
+<p>Download <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab05.py">symtab05.py</a>, run it on the command line, and see what&nbsp;happens:</p>
+<div class="highlight"><pre><span></span>$ python symtab05.py
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: x
+Lookup: y
+Error: Symbol<span class="o">(</span>identifier<span class="o">)</span> not found <span class="s1">'y'</span>
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>You can see the error message <strong><em>Error: Symbol(identifier) not found ‘y’</em></strong> and the contents of the symbol&nbsp;table.</p>
+<p>Congratulations on finishing the current version of our semantic 
+analyzer that can statically check if variables in a program are 
+declared before they are used, and if they are not, throws an exception 
+indicating a semantic&nbsp;error!</p>
+<p>Let’s pause for a second and celebrate this important milestone. 
+Okay, the second is over and we need to move on to another static 
+semantic check. For fun and profit let’s extend our semantic analyzer to
+ check for duplicate identifiers in&nbsp;declarations.</p>
+<p>Let’s take a look at the following program,&nbsp;SymTab6:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">SymTab6</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+<span class="k">begin</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p>Variable <strong>y</strong> has been declared twice: the first time as <em>integer</em> and the second time as <em>real</em>.</p>
+<p>To catch that semantic error we need to modify our <em>visit_VarDecl</em>
+ method to check whether the symbol table already has a symbol with the 
+same name before inserting a new symbol. Here is our new version of 
+the&nbsp;method:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="c1"># Signal an error if the table alrady has a symbol</span>
+    <span class="c1"># with the same name</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="s2">"Error: Duplicate identifier '</span><span class="si">%s</span><span class="s2">' found"</span> <span class="o">%</span> <span class="n">var_name</span>
+        <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">symtab</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p><br>
+File <a href="https://github.com/rspivak/lsbasi/blob/master/part13/symtab06.py">symtab06.py</a> has all the changes. Download it and run it on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python symtab06.py
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Lookup: x
+Insert: x
+Lookup: INTEGER
+Lookup: y
+Insert: y
+Lookup: REAL
+Lookup: y
+Error: Duplicate identifier <span class="s1">'y'</span> found
+
+
+Symbol table contents
+_____________________
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>Study the output and the contents of the symbol table. Make sure you understand what’s going&nbsp;on.</p>
+<p><br></p>
+<h2 id="summary">Summary</h2>
+<p>Let’s quickly recap what we learned&nbsp;today:</p>
+<ul>
+<li>We learned more about symbols, symbol tables, and semantic analysis in&nbsp;general</li>
+<li>We learned about name resolution and how the semantic analyzer resolves names to their&nbsp;declarations</li>
+<li>We learned how to code a semantic analyzer that walks an <span class="caps">AST</span>, builds the symbol table, and does basic semantic&nbsp;checks</li>
+</ul>
+<p><br>
+And, as a reminder, the structure of our interpreter now looks like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/lsbasi_part13_img03.png" width="400"></p>
+<p><br>
+We’re done with semantic checks for today and we’re finally ready to 
+tackle the topic of scopes, how they relate to symbol tables, and the 
+topic of semantic checks in the presence of nested scopes. Those will be
+ central topics of the next article. Stay tuned and see you&nbsp;soon!</p>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app1558" name="dsq-app1558" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/a.html" style="height: 1962px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-13-semantic-analysis';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part13/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/jquery.js"></script><iframe style="display: none;"></iframe>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2013%20Semantic%C2%A0Analysis.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+</body></html>

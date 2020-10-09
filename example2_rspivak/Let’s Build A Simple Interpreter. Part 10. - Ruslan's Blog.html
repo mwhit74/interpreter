@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part&nbsp;10. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part10/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="Today we will continue closing the gap between where we are right now and where we want to be: a fully functional interpreter for a subset of Pascal programming language. In this article we will update our interpreter to parse and interpret our very first complete Pascal program. The program …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part&nbsp;10.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part10/">
+        <meta property="og:description" content="Today we will continue closing the gap between where we are right now and where we want to be: a fully functional interpreter for a subset of Pascal programming language. In this article we will update our interpreter to parse and interpret our very first complete Pascal program. The program …">
+        <meta property="article:published_time" content="2016-08-04">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/a_data/lounge_002.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part10/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part&nbsp;10.">
+                        Let’s Build A Simple Interpreter. Part&nbsp;10.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-08-04T09:15:00-04:00"> Thu, August 04, 2016</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <p>Today we will continue closing the gap between where we are right now and where we want to be: <a href="https://ruslanspivak.com/lsbasi-part1/">a fully functional interpreter for a subset of Pascal programming language</a>.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/lsbasi_part10_intro.png"></p>
+<p>In this article we will update our interpreter to parse and interpret
+ our very first complete Pascal program. The program can also be 
+compiled by the <a href="http://www.freepascal.org/">Free Pascal compiler, <em>fpc</em></a>.</p>
+<p>Here is the program&nbsp;itself:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part10</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">number</span>     <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">c</span><span class="o">,</span> <span class="n">x</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">y</span>          <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+
+<span class="k">BEGIN</span> <span class="cm">{Part10}</span>
+   <span class="k">BEGIN</span>
+      <span class="n">number</span> <span class="o">:=</span> <span class="mi">2</span><span class="o">;</span>
+      <span class="n">a</span> <span class="o">:=</span> <span class="n">number</span><span class="o">;</span>
+      <span class="n">b</span> <span class="o">:=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">number</span> <span class="k">DIV</span> <span class="mi">4</span><span class="o">;</span>
+      <span class="n">c</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">-</span> <span class="o">-</span> <span class="n">b</span>
+   <span class="k">END</span><span class="o">;</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="mi">11</span><span class="o">;</span>
+   <span class="n">y</span> <span class="o">:=</span> <span class="mi">20</span> <span class="o">/</span> <span class="mi">7</span> <span class="o">+</span> <span class="mf">3.14</span><span class="o">;</span>
+   <span class="cm">{ writeln('a = ', a); }</span>
+   <span class="cm">{ writeln('b = ', b); }</span>
+   <span class="cm">{ writeln('c = ', c); }</span>
+   <span class="cm">{ writeln('number = ', number); }</span>
+   <span class="cm">{ writeln('x = ', x); }</span>
+   <span class="cm">{ writeln('y = ', y); }</span>
+<span class="k">END</span><span class="o">.</span>  <span class="cm">{Part10}</span>
+</pre></div>
+
+
+<p>Before we start digging into the details, download the source code of the interpreter from <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/spi.py">GitHub</a> and the <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/part10.pas">Pascal source code above</a>, and try it on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python spi.py part10.pas
+<span class="nv">a</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">b</span> <span class="o">=</span> <span class="m">25</span>
+<span class="nv">c</span> <span class="o">=</span> <span class="m">27</span>
+<span class="nv">number</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">x</span> <span class="o">=</span> <span class="m">11</span>
+<span class="nv">y</span> <span class="o">=</span> <span class="m">5</span>.99714285714
+</pre></div>
+
+
+<p><br>
+If I remove the comments around the <em>writeln</em> statements in the <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/part10.pas">part10.pas</a> file, compile the source code with <a href="http://www.freepascal.org/"><em>fpc</em></a> and then run the produced executable, this is what I get on my&nbsp;laptop:</p>
+<div class="highlight"><pre><span></span>$ fpc part10.pas
+$ ./part10
+<span class="nv">a</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">b</span> <span class="o">=</span> <span class="m">25</span>
+<span class="nv">c</span> <span class="o">=</span> <span class="m">27</span>
+<span class="nv">number</span> <span class="o">=</span> <span class="m">2</span>
+<span class="nv">x</span> <span class="o">=</span> <span class="m">11</span>
+<span class="nv">y</span> <span class="o">=</span>  <span class="m">5</span>.99714285714286E+000
+</pre></div>
+
+
+<p><br>
+Okay, let’s see what we’re going cover&nbsp;today:</p>
+<ol>
+<li>We will learn how to parse and interpret the Pascal <strong><em><span class="caps">PROGRAM</span></em></strong>&nbsp;header</li>
+<li>We will learn how to parse Pascal variable&nbsp;declarations</li>
+<li>We will update our interpreter to use the <strong><em><span class="caps">DIV</span></em></strong> keyword for integer division and a forward slash / for float&nbsp;division</li>
+<li>We will add support for Pascal&nbsp;comments</li>
+</ol>
+<p><br>
+Let’s dive in and look at the grammar changes first. Today we will add some new rules and update some of the existing rules.
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/lsbasi_part10_grammar1.png">
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/lsbasi_part10_grammar2.png"></p>
+<ol>
+<li>
+<p>The <em><strong>program</strong></em> definition grammar rule is updated to include the <em><strong><span class="caps">PROGRAM</span></strong></em> reserved keyword, the program name, and a block that ends with a dot. Here is an example of a complete Pascal&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part10</span><span class="o">;</span>
+<span class="k">BEGIN</span>
+<span class="k">END</span><span class="o">.</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em><strong>block</strong></em> rule combines a <em>declarations</em> rule and a <em>compound_statement</em> rule. We’ll also use the rule later in the series when we add procedure declarations. Here is an example of a&nbsp;block:</p>
+<div class="highlight"><pre><span></span><span class="k">VAR</span>
+   <span class="n">number</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+<span class="k">BEGIN</span>
+<span class="k">END</span>
+</pre></div>
+
+
+<p>Here is another&nbsp;example:</p>
+<div class="highlight"><pre><span></span><span class="k">BEGIN</span>
+<span class="k">END</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>Pascal declarations have several parts and each part is optional. In 
+this article, we’ll cover the variable declaration part only. The <em><strong>declarations</strong></em> rule has either a variable declaration sub-rule or it’s&nbsp;empty.</p>
+</li>
+<li>
+<p>Pascal is a statically typed language, which means that every 
+variable needs a variable declaration that explicitly specifies its 
+type. In Pascal, variables must be declared before they are used. This 
+is achieved by declaring variables in the program variable declaration 
+section using the <em><strong><span class="caps">VAR</span></strong></em> reserved keyword. You can define variables like&nbsp;this:</p>
+<div class="highlight"><pre><span></span><span class="k">VAR</span>
+   <span class="n">number</span>     <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">c</span><span class="o">,</span> <span class="n">x</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">y</span>          <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em><strong>type_spec</strong></em> rule is for handling <em><span class="caps">INTEGER</span></em> and <em><span class="caps">REAL</span></em> types and is used in variable declarations. In the example&nbsp;below</p>
+<div class="highlight"><pre><span></span><span class="k">VAR</span>
+   <span class="n">a</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">b</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+</pre></div>
+
+
+<p>the variable “a” is declared with the type <em><span class="caps">INTEGER</span></em> and the variable “b” is declared with the type <em><span class="caps">REAL</span></em> (float). In this article we won’t enforce type checking, but we will add type checking later in the&nbsp;series.</p>
+</li>
+<li>
+<p>The <em><strong>term</strong></em> rule is updated to use the <em><strong><span class="caps">DIV</span></strong></em> keyword for integer division and a forward slash / for float&nbsp;division.</p>
+<p>Before, dividing 20 by 7 using a forward slash would produce an <span class="caps">INTEGER</span>&nbsp;2:</p>
+<div class="highlight"><pre><span></span>20 / 7 = 2
+</pre></div>
+
+
+<p>Now, dividing 20 by 7 using a forward slash will produce a <span class="caps">REAL</span> (floating point number) 2.85714285714&nbsp;:</p>
+<div class="highlight"><pre><span></span>20 / 7 = 2.85714285714
+</pre></div>
+
+
+<p>From now on, to get an <span class="caps">INTEGER</span> instead of a <span class="caps">REAL</span>, you need to use the <em><strong><span class="caps">DIV</span></strong></em>&nbsp;keyword:</p>
+<div class="highlight"><pre><span></span>20 DIV 7 = 2
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em><strong>factor</strong></em> rule is updated to handle both integer and real (float) constants. I also removed the <span class="caps">INTEGER</span> sub-rule because the constants will be represented by <em><strong>INTEGER_CONST</strong></em> and <em><strong>REAL_CONST</strong></em> tokens and the <em><strong><span class="caps">INTEGER</span></strong></em> token will be used to represent the integer type. In the example below the lexer will generate an <em>INTEGER_CONST</em> token for 20 and 7 and a <em>REAL_CONST</em> token for 3.14&nbsp;:</p>
+<div class="highlight"><pre><span></span><span class="n">y</span> <span class="o">:=</span> <span class="mi">20</span> <span class="o">/</span> <span class="mi">7</span> <span class="o">+</span> <span class="mf">3.14</span><span class="o">;</span>
+</pre></div>
+
+
+</li>
+</ol>
+<p><br>
+Here is our complete grammar for&nbsp;today:</p>
+<div class="highlight"><pre><span></span>    program : PROGRAM variable SEMI block DOT
+
+    block : declarations compound_statement
+
+    declarations : VAR (variable_declaration SEMI)+
+                 | empty
+
+    variable_declaration : ID (COMMA ID)* COLON type_spec
+
+    type_spec : INTEGER | REAL
+
+    compound_statement : BEGIN statement_list END
+
+    statement_list : statement
+                   | statement SEMI statement_list
+
+    statement : compound_statement
+              | assignment_statement
+              | empty
+
+    assignment_statement : variable ASSIGN expr
+
+    empty :
+
+    expr : term ((PLUS | MINUS) term)*
+
+    term : factor ((MUL | INTEGER_DIV | FLOAT_DIV) factor)*
+
+    factor : PLUS factor
+           | MINUS factor
+           | INTEGER_CONST
+           | REAL_CONST
+           | LPAREN expr RPAREN
+           | variable
+
+    variable: ID
+</pre></div>
+
+
+<p>In the rest of the article we’ll go through the same drill we went through last&nbsp;time:</p>
+<ol>
+<li>Update the&nbsp;lexer</li>
+<li>Update the&nbsp;parser</li>
+<li>Update the&nbsp;interpreter</li>
+</ol>
+<p><br>
+<strong>Updating the&nbsp;Lexer</strong></p>
+<p>Here is a summary of the lexer&nbsp;changes:</p>
+<ol>
+<li>New&nbsp;tokens</li>
+<li>New and updated reserved&nbsp;keywords</li>
+<li>New <em>skip_comment</em> method to handle Pascal&nbsp;comments</li>
+<li>Rename the <em>integer</em> method and make some changes to the method&nbsp;itself</li>
+<li>Update the <em>get_next_token</em> method to return new&nbsp;tokens</li>
+</ol>
+<p>Let’s dig into the changes mentioned&nbsp;above:</p>
+<ol>
+<li>
+<p>To handle a program header, variable declarations, integer and float 
+constants as well as integer and float division, we need to add some new
+ tokens - some of which are reserved keywords - and we also need to 
+update the meaning of the <span class="caps">INTEGER</span> token to represent the integer type and not an integer constant. Here is a complete list of new and updated&nbsp;tokens:</p>
+<ul>
+<li><span class="caps">PROGRAM</span> (reserved&nbsp;keyword)</li>
+<li><span class="caps">VAR</span> (reserved&nbsp;keyword)</li>
+<li><span class="caps">COLON</span>&nbsp;(:)</li>
+<li><span class="caps">COMMA</span>&nbsp;(,)</li>
+<li><span class="caps">INTEGER</span> (we change it to mean integer type and not integer constant like 3 or&nbsp;5)</li>
+<li><span class="caps">REAL</span> (for Pascal <span class="caps">REAL</span>&nbsp;type)</li>
+<li>INTEGER_CONST (for example, 3 or&nbsp;5)</li>
+<li>REAL_CONST (for example, 3.14 and so&nbsp;on)</li>
+<li>INTEGER_DIV for integer division (the <em><strong><span class="caps">DIV</span></strong></em> reserved&nbsp;keyword)</li>
+<li>FLOAT_DIV for float division ( forward slash /&nbsp;)</li>
+</ul>
+</li>
+<li>
+<p>Here is the complete mapping of reserved keywords to&nbsp;tokens:</p>
+<div class="highlight"><pre><span></span><span class="n">RESERVED_KEYWORDS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'PROGRAM'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'PROGRAM'</span><span class="p">,</span> <span class="s1">'PROGRAM'</span><span class="p">),</span>
+    <span class="s1">'VAR'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'VAR'</span><span class="p">,</span> <span class="s1">'VAR'</span><span class="p">),</span>
+    <span class="s1">'DIV'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'INTEGER_DIV'</span><span class="p">,</span> <span class="s1">'DIV'</span><span class="p">),</span>
+    <span class="s1">'INTEGER'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">,</span> <span class="s1">'INTEGER'</span><span class="p">),</span>
+    <span class="s1">'REAL'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'REAL'</span><span class="p">,</span> <span class="s1">'REAL'</span><span class="p">),</span>
+    <span class="s1">'BEGIN'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'BEGIN'</span><span class="p">,</span> <span class="s1">'BEGIN'</span><span class="p">),</span>
+    <span class="s1">'END'</span><span class="p">:</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'END'</span><span class="p">,</span> <span class="s1">'END'</span><span class="p">),</span>
+<span class="p">}</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>We’re adding the <em>skip_comment</em> method to handle Pascal 
+comments. The method is pretty basic and all it does is discard all the 
+characters until the closing curly brace is&nbsp;found:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">skip_comment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">!=</span> <span class="s1">'}'</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>  <span class="c1"># the closing curly brace</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>We are renaming the <em>integer</em> method the <em>number</em> method. It can handle both integer constants and float constants like 3 and&nbsp;3.14:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">number</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Return a (multidigit) integer or float consumed from the input."""</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="s1">''</span>
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+        <span class="n">result</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">'.'</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+
+        <span class="k">while</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+
+        <span class="n">token</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'REAL_CONST'</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s1">'INTEGER_CONST'</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">token</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>We’re also updating the <em>get_next_token</em> method to return new&nbsp;tokens:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_next_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="o">...</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">'{'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">skip_comment</span><span class="p">()</span>
+            <span class="k">continue</span>
+        <span class="o">...</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">number</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">':'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">COLON</span><span class="p">,</span> <span class="s1">':'</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">','</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">COMMA</span><span class="p">,</span> <span class="s1">','</span><span class="p">)</span>
+        <span class="o">...</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_char</span> <span class="o">==</span> <span class="s1">'/'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">advance</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Token</span><span class="p">(</span><span class="n">FLOAT_DIV</span><span class="p">,</span> <span class="s1">'/'</span><span class="p">)</span>
+        <span class="o">...</span>
+</pre></div>
+
+
+</li>
+</ol>
+<p><br>
+<strong>Updating the&nbsp;Parser</strong></p>
+<p>Now onto the parser&nbsp;changes.</p>
+<p>Here is a summary of the&nbsp;changes:</p>
+<ol>
+<li>New <span class="caps">AST</span> nodes: <em>Program</em>, <em>Block</em>, <em>VarDecl</em>, <em>Type</em></li>
+<li>New methods corresponding to new grammar rules: <em>block</em>, <em>declarations</em>, <em>variable_declaration</em>, and <em>type_spec</em>.</li>
+<li>Updates to the existing parser methods: <em>program</em>, <em>term</em>, and <em>factor</em></li>
+</ol>
+<p>Let’s go over the changes one by&nbsp;one:</p>
+<ol>
+<li>
+<p>We’ll start with new <span class="caps">AST</span> nodes first. There are four new&nbsp;nodes:</p>
+<ul>
+<li>
+<p>The <em>Program</em> <span class="caps">AST</span> node represents a program and will be our root&nbsp;node</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Program</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block</span> <span class="o">=</span> <span class="n">block</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em>Block</em> <span class="caps">AST</span> node holds declarations and a compound&nbsp;statement:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Block</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">declarations</span><span class="p">,</span> <span class="n">compound_statement</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declarations</span> <span class="o">=</span> <span class="n">declarations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_statement</span> <span class="o">=</span> <span class="n">compound_statement</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em>VarDecl</em> <span class="caps">AST</span> node represents a variable declaration. It holds a variable node and a type&nbsp;node:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">VarDecl</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var_node</span><span class="p">,</span> <span class="n">type_node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_node</span> <span class="o">=</span> <span class="n">var_node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_node</span> <span class="o">=</span> <span class="n">type_node</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>The <em>Type</em> <span class="caps">AST</span> node represents a variable type (<span class="caps">INTEGER</span> or <span class="caps">REAL</span>):</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Type</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="n">token</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">token</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+
+
+</li>
+</ul>
+</li>
+<li>
+<p>As you probably remember, each rule from the grammar has a 
+corresponding method in our recursive-descent parser. Today we’re adding
+ four new methods: <em>block</em>, <em>declarations</em>, <em>variable_declaration</em>, and <em>type_spec</em>. These methods are responsible for parsing new language constructs and constructing new <span class="caps">AST</span>&nbsp;nodes:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""block : declarations compound_statement"""</span>
+    <span class="n">declaration_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">declarations</span><span class="p">()</span>
+    <span class="n">compound_statement_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compound_statement</span><span class="p">()</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">Block</span><span class="p">(</span><span class="n">declaration_nodes</span><span class="p">,</span> <span class="n">compound_statement_node</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">node</span>
+
+<span class="k">def</span> <span class="nf">declarations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""declarations : VAR (variable_declaration SEMI)+</span>
+<span class="sd">                    | empty</span>
+<span class="sd">    """</span>
+    <span class="n">declarations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">VAR</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">VAR</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">ID</span><span class="p">:</span>
+            <span class="n">var_decl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable_declaration</span><span class="p">()</span>
+            <span class="n">declarations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">var_decl</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">SEMI</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">declarations</span>
+
+<span class="k">def</span> <span class="nf">variable_declaration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""variable_declaration : ID (COMMA ID)* COLON type_spec"""</span>
+    <span class="n">var_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">Var</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="p">)]</span>  <span class="c1"># first ID</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">COMMA</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">COMMA</span><span class="p">)</span>
+        <span class="n">var_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Var</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">ID</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">COLON</span><span class="p">)</span>
+
+    <span class="n">type_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_spec</span><span class="p">()</span>
+    <span class="n">var_declarations</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">VarDecl</span><span class="p">(</span><span class="n">var_node</span><span class="p">,</span> <span class="n">type_node</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">var_node</span> <span class="ow">in</span> <span class="n">var_nodes</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">var_declarations</span>
+
+<span class="k">def</span> <span class="nf">type_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""type_spec : INTEGER</span>
+<span class="sd">                 | REAL</span>
+<span class="sd">    """</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">INTEGER</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">REAL</span><span class="p">)</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">Type</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">node</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>We also need to update the <em>program</em>, <em>term</em>, and, <em>factor</em> methods to accommodate our grammar&nbsp;changes:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">program</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""program : PROGRAM variable SEMI block DOT"""</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">PROGRAM</span><span class="p">)</span>
+    <span class="n">var_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="p">()</span>
+    <span class="n">prog_name</span> <span class="o">=</span> <span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">SEMI</span><span class="p">)</span>
+    <span class="n">block_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block</span><span class="p">()</span>
+    <span class="n">program_node</span> <span class="o">=</span> <span class="n">Program</span><span class="p">(</span><span class="n">prog_name</span><span class="p">,</span> <span class="n">block_node</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">DOT</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">program_node</span>
+
+<span class="k">def</span> <span class="nf">term</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""term : factor ((MUL | INTEGER_DIV | FLOAT_DIV) factor)*"""</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MUL</span><span class="p">,</span> <span class="n">INTEGER_DIV</span><span class="p">,</span> <span class="n">FLOAT_DIV</span><span class="p">):</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+        <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">MUL</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">MUL</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">INTEGER_DIV</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER_DIV</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">FLOAT_DIV</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">FLOAT_DIV</span><span class="p">)</span>
+
+        <span class="n">node</span> <span class="o">=</span> <span class="n">BinOp</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="n">node</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">token</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">node</span>
+
+<span class="k">def</span> <span class="nf">factor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""factor : PLUS factor</span>
+<span class="sd">              | MINUS factor</span>
+<span class="sd">              | INTEGER_CONST</span>
+<span class="sd">              | REAL_CONST</span>
+<span class="sd">              | LPAREN expr RPAREN</span>
+<span class="sd">              | variable</span>
+<span class="sd">    """</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+    <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PLUS</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">PLUS</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">UnaryOp</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">node</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">MINUS</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">MINUS</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">UnaryOp</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">node</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">INTEGER_CONST</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER_CONST</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Num</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">REAL_CONST</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">REAL_CONST</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Num</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">LPAREN</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">LPAREN</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">RPAREN</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variable</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">node</span>
+</pre></div>
+
+
+</li>
+</ol>
+<p><br>
+Now, let’s see what the <em><strong>Abstract Syntax Tree</strong></em> looks like with the new nodes.
+Here is a small working Pascal&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">PROGRAM</span> <span class="n">Part10AST</span><span class="o">;</span>
+<span class="k">VAR</span>
+   <span class="n">a</span><span class="o">,</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="n">y</span>    <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+
+<span class="k">BEGIN</span> <span class="cm">{Part10AST}</span>
+   <span class="n">a</span> <span class="o">:=</span> <span class="mi">2</span><span class="o">;</span>
+   <span class="n">b</span> <span class="o">:=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">a</span> <span class="k">DIV</span> <span class="mi">4</span><span class="o">;</span>
+   <span class="n">y</span> <span class="o">:=</span> <span class="mi">20</span> <span class="o">/</span> <span class="mi">7</span> <span class="o">+</span> <span class="mf">3.14</span><span class="o">;</span>
+<span class="k">END</span><span class="o">.</span>  <span class="cm">{Part10AST}</span>
+</pre></div>
+
+
+<p>Let’s generate an <span class="caps">AST</span> and visualize it with the <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/genastdot.py">genastdot.py</a>:</p>
+<div class="highlight"><pre><span></span>$ python genastdot.py part10ast.pas &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/lsbasi_part10_ast.png"></p>
+<p>In the picture you can see the new nodes that we have&nbsp;added.</p>
+<p><br>
+<strong>Updating the&nbsp;Interpreter</strong></p>
+<p>We’re done with the lexer and parser changes. What’s left is to add new visitor methods to our <em>Interpreter</em> class. There will be four new methods to visit our new&nbsp;nodes:</p>
+<ul>
+<li><em>visit_Program</em></li>
+<li><em>visit_Block</em></li>
+<li><em>visit_VarDecl</em></li>
+<li><em>visit_Type</em></li>
+</ul>
+<p>They are pretty straightforward. You can also see that the <em>Interpreter</em> does nothing with <em>VarDecl</em> and <em>Type</em>&nbsp;nodes:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_Block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">declaration</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">declarations</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">declaration</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">compound_statement</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="c1"># Do nothing</span>
+    <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">visit_Type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="c1"># Do nothing</span>
+    <span class="k">pass</span>
+</pre></div>
+
+
+<p>We also need to update the <em>visit_BinOp</em> method to properly interpret integer and float&nbsp;divisions:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_BinOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PLUS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">MINUS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">MUL</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">INTEGER_DIV</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">FLOAT_DIV</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">))</span>
+</pre></div>
+
+
+<p><br>
+Let’s sum up what we had to do to extend the Pascal interpreter in this&nbsp;article:</p>
+<ul>
+<li>Add new rules to the grammar and update some existing&nbsp;rules</li>
+<li>Add new tokens and supporting methods to the lexer, update and modify some existing&nbsp;methods</li>
+<li>Add new <span class="caps">AST</span> nodes to the parser for new language&nbsp;constructs</li>
+<li>Add new methods corresponding to the new grammar rules to our recursive-descent parser and update some existing&nbsp;methods</li>
+<li>Add new visitor methods to the interpreter and update one existing visitor&nbsp;method</li>
+</ul>
+<p>As a result of our changes we also got rid of some of the hacks I introduced in <a href="https://ruslanspivak.com/lsbasi-part9/">Part 9</a>,&nbsp;namely:</p>
+<ul>
+<li>Our interpreter can now handle the <em><strong><span class="caps">PROGRAM</span></strong></em>&nbsp;header</li>
+<li>Variables can now be declared using the <em><strong><span class="caps">VAR</span></strong></em>&nbsp;keyword</li>
+<li>The <em><strong><span class="caps">DIV</span></strong></em> keyword is used for integer division and a forward slash / is used for float&nbsp;division</li>
+</ul>
+<p><br>
+If you haven’t done so yet, then, as an exercise, re-implement the 
+interpreter in this article without looking at the source code and use <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/part10.pas">part10.pas</a> as your test input&nbsp;file.</p>
+<p><br>
+That’s all for today. In the next article, I’ll talk in greater detail 
+about symbol table management. Stay tuned and see you&nbsp;soon!</p>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app9266" name="dsq-app9266" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/a.html" style="height: 2851px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-10';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part10/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A010.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part&nbsp;8. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part8/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="Today we’ll talk about unary operators, namely unary plus (+) and unary minus (-)&nbsp;operators. A lot of today’s material is based on the material from the previous article, so if you need a refresher just head back to Part 7 and go over it again. Remember: repetition is the …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part&nbsp;8.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part8/">
+        <meta property="og:description" content="Today we’ll talk about unary operators, namely unary plus (+) and unary minus (-)&nbsp;operators. A lot of today’s material is based on the material from the previous article, so if you need a refresher just head back to Part 7 and go over it again. Remember: repetition is the …">
+        <meta property="article:published_time" content="2016-01-18">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/a_data/lounge.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/alfalfalfa.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part8/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part&nbsp;8.">
+                        Let’s Build A Simple Interpreter. Part&nbsp;8.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2016-01-18T06:10:00-05:00"> Mon, January 18, 2016</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <p>Today we’ll talk about <strong>unary operators</strong>, namely unary plus (+) and unary minus  (-)&nbsp;operators.</p>
+<p>A lot of today’s material is based on the material from the previous article, so if you need a refresher just head back to <a href="http://ruslanspivak.com/lsbasi-part7/" title="Part 7">Part 7</a> and go over it again. Remember: repetition is the mother of all&nbsp;learning.</p>
+<p>Having said that, this is what you are going to do&nbsp;today:</p>
+<ul>
+<li>extend the grammar to handle unary plus and unary minus&nbsp;operators</li>
+<li>add a new <em>UnaryOp</em> <span class="caps">AST</span> node&nbsp;class</li>
+<li>extend the parser to generate an <span class="caps">AST</span> with <em>UnaryOp</em>&nbsp;nodes</li>
+<li>extend the interpreter and add a new <em>visit_UnaryOp</em> method to interpret unary&nbsp;operators</li>
+</ul>
+<p>Let’s get started, shall&nbsp;we?</p>
+<p>So far we’ve worked with binary operators only (+, -, *, /), that is, the operators that operate on two&nbsp;operands.</p>
+<p>What is a unary operator then? A <em>unary operator</em> is an operator that operates on one <em>operand</em>&nbsp;only.</p>
+<p>Here are the rules for unary plus and unary minus&nbsp;operators:</p>
+<ul>
+<li>The unary minus (-) operator produces the negation of its numeric&nbsp;operand</li>
+<li>The unary plus (+) operator yields its numeric operand without&nbsp;change</li>
+<li>The unary operators have higher precedence than the binary operators +, -, *, and&nbsp;/</li>
+</ul>
+<p>In the expression “+ - 3” the first ‘+’ operator represents the unary
+ plus operation and the second ‘-‘ operator represents the unary minus 
+operation. The expression “+ - 3” is equivalent to “+ (- (3))” which is 
+equal to -3. One could also say that <strong>-3</strong> in the 
+expression is a negative integer, but in our case we treat it as a unary
+ minus operator with 3 as its positive integer&nbsp;operand:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_exp1.png" width="640"></p>
+<p>Let’s take a look at another expression, “5 - -&nbsp;2”:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_exp2.png" width="640"></p>
+<p>In the expression “5 - - 2” the first ‘-‘ represents the <em>binary</em> subtraction operation and the second ‘-‘ represents the <em>unary</em> minus operation, the&nbsp;negation.</p>
+<p>And some more&nbsp;examples:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_exp3.png" width="640"></p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_exp4.png" width="640"></p>
+<p>Now let’s update our grammar to include unary plus and unary minus operators. We’ll modify the <em>factor</em> rule and add unary operators there because unary operators have higher precedence than binary +, -, * and /&nbsp;operators.</p>
+<p>This is our current <em>factor</em>&nbsp;rule:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_factor_before.png" width="640"></p>
+<p>And this is our updated <em>factor</em> rule to handle unary plus and unary minus&nbsp;operators:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_factor_after.png" width="640"></p>
+<p>As you can see, I extended the <em>factor</em> rule to reference 
+itself, which allows us to derive expressions like  “- - - + - 3”, a 
+legitimate expression with a lot of unary&nbsp;operators.</p>
+<p>Here is the full grammar that can now derive expressions with unary plus and unary minus&nbsp;operators:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_grammar.png" width="640"></p>
+<p>The next step is to add an <span class="caps">AST</span> node class to represent unary&nbsp;operators.</p>
+<p>This one will&nbsp;do:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">UnaryOp</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">expr</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expr</span> <span class="o">=</span> <span class="n">expr</span>
+</pre></div>
+
+
+<p>The constructor takes two parameters: <em>op</em>, which represents the unary operator token (plus or minus) and <em>expr</em>, which represents an <span class="caps">AST</span>&nbsp;node.</p>
+<p>Our updated grammar had changes to the <em>factor</em> rule, so that’s what we’re going to modify in our parser - the <em>factor</em> method. We will add code to the method to handle the “(<span class="caps">PLUS</span> | <span class="caps">MINUS</span>) factor”&nbsp;sub-rule:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">factor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""factor : (PLUS | MINUS) factor | INTEGER | LPAREN expr RPAREN"""</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_token</span>
+    <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">PLUS</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">PLUS</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">UnaryOp</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">node</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">MINUS</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">MINUS</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">UnaryOp</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">node</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">INTEGER</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Num</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">LPAREN</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">LPAREN</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eat</span><span class="p">(</span><span class="n">RPAREN</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span>
+</pre></div>
+
+
+<p><br>
+And now we need to extend the <em>Interpreter</em> class and add a <em>visit_UnaryOp</em> method to interpret unary&nbsp;nodes:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_UnaryOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">op</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">type</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="n">PLUS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="n">MINUS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Onward!</p>
+<p>Let’s manually build an <span class="caps">AST</span> for the expression “5 - - - 2” and pass it to our interpreter to verify that the new <em>visit_UnaryOp</em> method works. Here is how you can do it from the Python&nbsp;shell:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">spi</span> <span class="kn">import</span> <span class="n">BinOp</span><span class="p">,</span> <span class="n">UnaryOp</span><span class="p">,</span> <span class="n">Num</span><span class="p">,</span> <span class="n">MINUS</span><span class="p">,</span> <span class="n">INTEGER</span><span class="p">,</span> <span class="n">Token</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">five_tok</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">two_tok</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="n">INTEGER</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">minus_tok</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="n">MINUS</span><span class="p">,</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">expr_node</span> <span class="o">=</span> <span class="n">BinOp</span><span class="p">(</span>
+<span class="o">...</span>     <span class="n">Num</span><span class="p">(</span><span class="n">five_tok</span><span class="p">),</span>
+<span class="o">...</span>     <span class="n">minus_tok</span><span class="p">,</span>
+<span class="o">...</span>     <span class="n">UnaryOp</span><span class="p">(</span><span class="n">minus_token</span><span class="p">,</span> <span class="n">UnaryOp</span><span class="p">(</span><span class="n">minus_token</span><span class="p">,</span> <span class="n">Num</span><span class="p">(</span><span class="n">two_tok</span><span class="p">)))</span>
+<span class="o">...</span> <span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">spi</span> <span class="kn">import</span> <span class="n">Interpreter</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">inter</span> <span class="o">=</span> <span class="n">Interpreter</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">inter</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">expr_node</span><span class="p">)</span>
+<span class="mi">3</span>
+</pre></div>
+
+
+<p>Visually the above <span class="caps">AST</span> tree looks like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_ast.png" width="420"></p>
+<p>Download the full source code of the interpreter for this article directly from <a href="https://github.com/rspivak/lsbasi/blob/master/part8/python/spi.py">GitHub</a>.
+ Try it out and see for yourself that your updated tree-based 
+interpreter properly evaluates arithmetic expressions containing 
+unary&nbsp;operators.</p>
+<p>Here is a sample&nbsp;session:</p>
+<div class="highlight"><pre><span></span>$ python spi.py
+spi&gt; - <span class="m">3</span>
+-3
+spi&gt; + <span class="m">3</span>
+<span class="m">3</span>
+spi&gt; <span class="m">5</span> - - - + - <span class="m">3</span>
+<span class="m">8</span>
+spi&gt; <span class="m">5</span> - - - + - <span class="o">(</span><span class="m">3</span> + <span class="m">4</span><span class="o">)</span> - +2
+<span class="m">10</span>
+</pre></div>
+
+
+<p><br>
+I also updated the <a href="https://github.com/rspivak/lsbasi/blob/master/part8/python/genastdot.py">genastdot.py</a> utility to handle unary operators. Here are some of the examples of the generated <span class="caps">AST</span> images for expressions with unary&nbsp;operators:</p>
+<div class="highlight"><pre><span></span>$ python genastdot.py <span class="s2">"- 3"</span> &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_genastdot_01.png"></p>
+<div class="highlight"><pre><span></span>$ python genastdot.py <span class="s2">"+ 3"</span> &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_genastdot_02.png"></p>
+<div class="highlight"><pre><span></span>$ python genastdot.py <span class="s2">"5 - - - + - 3"</span> &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_genastdot_03.png"></p>
+<div class="highlight"><pre><span></span>$ python genastdot.py <span class="s2">"5 - - - + - (3 + 4) - +2"</span> <span class="se">\</span>
+  &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_genastdot_04.png"></p>
+<p><br>
+<br>
+And here is a new exercise for&nbsp;you:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/lsbasi_part8_exercises.png" width="280"></p>
+<ul>
+<li>Install <a href="http://www.freepascal.org/">Free Pascal</a>, compile and run <a href="https://github.com/rspivak/lsbasi/blob/master/part8/python/testunary.pas">testunary.pas</a>, and verify that the results are the same as produced with your <a href="https://github.com/rspivak/lsbasi/blob/master/part8/python/spi.py">spi</a>&nbsp;interpreter.</li>
+</ul>
+<p><br>
+That’s all for today. In the next article, we’ll tackle assignment statements. Stay tuned and see you&nbsp;soon.</p>
+<p><br>
+Here is a list of books I recommend that will help you in your study of interpreters and&nbsp;compilers:</p>
+<ol>
+<li>
+<p><a href="http://www.amazon.com/gp/product/193435645X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=193435645X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=MP4DCXDV6DJMEJBL">Language Implementation Patterns: Create Your Own Domain-Specific and General Programming Languages (Pragmatic Programmers)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/ir_002" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/0470177071/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0470177071&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=UCLGQTPIYSWYKRRM">Writing Compilers and Interpreters: A Software Engineering Approach</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/ir_004" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/052182060X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=052182060X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=ZSKKZMV7YWR22NMW">Modern Compiler Implementation in Java</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/ir_003" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/1461446988/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=1461446988&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=PAXWJP5WCPZ7RKRD">Modern Compiler Design</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/ir_005" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a href="http://www.amazon.com/gp/product/0321486811/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0321486811&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=GOEGDQG4HIHU56FQ">Compilers: Principles, Techniques, and Tools (2nd Edition)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/ir" alt="" style="border: medium none !important; margin: 0px !important; display: none !important;" width="1" height="1" border="0"></p>
+</li>
+</ol>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app4388" name="dsq-app4388" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/a.html" style="height: 2468px !important;" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-8';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part8/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%C2%A08.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>

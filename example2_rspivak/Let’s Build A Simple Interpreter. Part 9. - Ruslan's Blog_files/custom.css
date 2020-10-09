@@ -1,0 +1,24 @@
+/* Text */
+body {
+  font-size: 18px;
+  font-family: "Droid Sans",sans-serif;
+}
+
+/* Highlighted source code */
+pre {
+  font-family: Consolas,monaco,monospace;
+  font-size: 80%;
+}
+
+blockquote {
+  font-size: 18px;
+}
+
+.navbar-brand {
+  font-size: 18px;
+}
+
+#disclaimer-text {
+  word-break: normal;
+  font-size: 15px;
+}
