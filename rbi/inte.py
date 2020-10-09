@@ -113,7 +113,7 @@ class Interpreter(object):
 def main():
     while True:
         try:
-            text = raw_input('calc> ')
+            text = input('calc> ')
         except EOFError:
             break
         if not text:
