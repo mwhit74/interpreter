@@ -7,6 +7,7 @@
 from collections import namedtuple
 import string
 import pdb
+import sys
 
 INTEGER, PLUS, MINUS, MULTIPLY, DIVIDE, CHAR, EOF = ['INTEGER', 'PLUS',
 'MINUS', 'MULTIPLY', 'DIVIDE', 'CHAR', 'EOF'] 
@@ -111,7 +112,7 @@ def get_next_token():
 
 def check_token_type(token, token_type):
     global cur_token
-    print(cur_token)
+    #print(cur_token)
     if token.token_type == token_type:
         cur_token = get_next_token()
     else:
@@ -131,6 +132,9 @@ def parse_and_interpret_expr():
     cur_char = text[pos]
     cur_token = get_next_token() #get the first token
 
+    if cur_token.token_value == 'q':
+        sys.exit()
+    
     result = term()
     while cur_token.token_type in (PLUS, MINUS) and cur_token.token_type != EOF:
         if cur_token.token_type == PLUS:
