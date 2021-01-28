@@ -266,8 +266,6 @@ class Parser(object):
 
         block = self.block()
 
-        self.check_token_type(SEMI)
-
         return Procedure(name, block)
 
     def block(self):
@@ -288,6 +286,7 @@ class Parser(object):
 
         while self.cur_token.type == PROCEDURE:
             decls.append(self.procedure())
+            self.check_token_type(SEMI)
            
         return decls 
 
@@ -548,7 +547,8 @@ class VarSymbol(Symbol):
         super().__init__(name, type)
 
     def __str__(self):
-        return f'<{self.name}:{self.type}>'
+        return '<{name}:{type}>'.format(name=self.name, type=self.type)
+        #return f'<{self.name}:{self.type}>'
 
     __repr__ = __str__
 
@@ -600,7 +600,7 @@ class BuildSymbolTable(NodeVisitor):
         type_name = node.type_node.value
         type_symbol = self.symtab.lookup(type_name)
         var_name = node.var_node.value
-        var_symbol = Symbol(var_name, type_symbol)
+        var_symbol = VarSymbol(var_name, type_symbol)
         self.symtab.define(var_symbol)
 
     def visit_TypeSpec(self, node):
@@ -660,7 +660,7 @@ class Interpreter(NodeVisitor):
         self.visit(node.block)
 
     def visit_Procedure(self, node):
-        self.visit(node.block)
+        pass
 
     def visit_Block(self, node):
         for decl in node.declarations:
