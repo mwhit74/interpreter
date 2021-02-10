@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html xmlns:og="http://ogp.me/ns#" xmlns:fb="https://www.facebook.com/2008/fbml" lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Let’s Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source&nbsp;Compiler. - Ruslan's Blog</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://ruslanspivak.com/lsbasi-part14/">
+
+        <meta name="author" content="Ruslan Spivak">
+        <meta name="description" content="Only dead fish go with the&nbsp;flow. As I promised in the last article, today we’re finally going to do a deep dive into the topic of&nbsp;scopes. This is what we’re going to learn&nbsp;today: We’re going to learn about scopes, why they are useful, and …">
+
+        <meta property="og:site_name" content="Ruslan's Blog">
+        <meta property="og:type" content="article">
+        <meta property="og:title" content="Let’s Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source&nbsp;Compiler.">
+        <meta property="og:url" content="https://ruslanspivak.com/lsbasi-part14/">
+        <meta property="og:description" content="Only dead fish go with the&nbsp;flow. As I promised in the last article, today we’re finally going to do a deep dive into the topic of&nbsp;scopes. This is what we’re going to learn&nbsp;today: We’re going to learn about scopes, why they are useful, and …">
+        <meta property="article:published_time" content="2017-05-08">
+            <meta property="article:section" content="blog">
+            <meta property="article:author" content="Ruslan Spivak">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:domain" content="https://ruslanspivak.com">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/bootstrap.css" type="text/css">
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/font-awesome.css" rel="stylesheet">
+
+    <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/tango.css" rel="stylesheet">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/typogrify.css" rel="stylesheet">
+    <link rel="stylesheet" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/style.css" type="text/css">
+        <link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/custom.css" rel="stylesheet">
+
+        <link href="https://ruslanspivak.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Ruslan's Blog ATOM Feed">
+
+<script async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/analytics.js"></script><script type="text/javascript" async="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/embed.js"></script><script async="" type="text/javascript" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/count.js"></script><link rel="prefetch" as="style" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/a_data/lounge.css"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/a_data/common.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/a_data/lounge.js"><link rel="prefetch" as="script" href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/a_data/config.js"><script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/alfie_v4.js" async="" charset="UTF-8"></script></head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	<div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://ruslanspivak.com/" class="navbar-brand">
+Ruslan's Blog            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="https://ruslanspivak.com/pages/about"><i class="fa fa-question"></i><span class="icon-label">About</span></a></li>
+              <li><a href="https://ruslanspivak.com/archives.html"><i class="fa fa-th-list"></i><span class="icon-label">Archives</span></a></li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+<!-- Banner -->
+<!-- End Banner -->
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9">
+
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://ruslanspivak.com/lsbasi-part14/" rel="bookmark" title="Permalink to Let’s Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source&nbsp;Compiler.">
+                        Let’s Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source&nbsp;Compiler.
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2017-05-08T05:45:00-04:00"> Mon, May 08, 2017</time>
+    </span>
+
+
+
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                    <blockquote>
+<p><em>Only dead fish go with the&nbsp;flow.</em></p>
+</blockquote>
+<p>As I promised in <a href="https://ruslanspivak.com/lsbasi-part13">the last article</a>, today we’re finally going to do a deep dive into the topic of&nbsp;scopes.</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img01.png"></p>
+<p>This is what we’re going to learn&nbsp;today:</p>
+<ul>
+<li>We’re going to learn about <em>scopes</em>, why they are useful, and how to implement them in code with symbol&nbsp;tables.</li>
+<li>We’re going to learn about <em>nested scopes</em> and how <em>chained scoped symbol tables</em> are used to implement nested&nbsp;scopes.</li>
+<li>We’re going to learn how to parse procedure declarations with formal
+ parameters and how to represent a procedure symbol in&nbsp;code.</li>
+<li>We’re going to learn how to extend our <em>semantic analyzer</em> to do semantic checks in the presence of nested&nbsp;scopes.</li>
+<li>We’re going to learn more about <em>name resolution</em> and how the semantic analyzer resolves names to their declarations when a program has nested&nbsp;scopes.</li>
+<li>We’re going to learn how to build a <em>scope tree</em>.</li>
+<li>We’re also going to learn how to write our very own <em><strong>source-to-source compiler</strong></em> today! We will see later in the article how relevant it is to our discussion of&nbsp;scopes.</li>
+</ul>
+<p>Let’s get started! Or should I say, let’s dive&nbsp;in!</p>
+<p><br></p>
+<blockquote>
+<div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#scopes-and-scoped-symbol-tables">Scopes and scoped symbol&nbsp;tables</a></li>
+<li><a href="#procedure-declarations-with-formal-parameters">Procedure declarations with formal&nbsp;parameters</a></li>
+<li><a href="#procedure-symbols">Procedure&nbsp;symbols</a></li>
+<li><a href="#nested-scopes">Nested&nbsp;scopes</a></li>
+<li><a href="#scope-tree-chaining-scoped-symbol-tables">Scope tree: Chaining scoped symbol&nbsp;tables</a></li>
+<li><a href="#nested-scopes-and-name-resolution">Nested scopes and name&nbsp;resolution</a></li>
+<li><a href="#source-to-source-compiler">Source-to-source&nbsp;compiler</a></li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#exercises">Exercises</a></li>
+</ul>
+</div>
+</blockquote>
+<p><br></p>
+<h3 id="scopes-and-scoped-symbol-tables">Scopes and scoped symbol&nbsp;tables</h3>
+<p>What is a <em>scope</em>? A <em><strong>scope</strong></em> is a textual region of a program where a name can be used. Let’s take a look at the following sample program, for&nbsp;example:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+<span class="k">begin</span>
+   <span class="n">x</span> <span class="o">:=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+<span class="k">end</span><span class="o">.</span>
+</pre></div>
+
+
+<p><br>
+In Pascal, the <em><span class="caps">PROGRAM</span></em> keyword (case insensitive, by the way) introduces a new scope which is commonly called a <em>global scope</em>, so the program above has one <em>global scope</em> and the declared variables <strong>x</strong> and <strong>y</strong> are visible and accessible in the whole program. In the case above, the textual region starts with the keyword <em>program</em> and ends with the keyword <em>end</em> and a dot. In that textual region both names <strong>x</strong> and <strong>y</strong> can be used, so the scope of those variables (variable declarations) is the whole&nbsp;program:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img02.png"></p>
+<p>When you look at the source code above and specifically at the expression <strong>x := x + y</strong>, you intuitively know that it should compile (or get interpreted) without a problem, because the scope of the variables <strong>x</strong> and <strong>y</strong> in the expression is the <em>global scope</em> and the variable references <strong>x</strong> and <strong>y</strong> in the expression <strong>x := x + y</strong> resolve to the declared integer variables <strong>x</strong> and <strong>y</strong>. If you’ve programmed before in any mainstream programming language, there shouldn’t be any surprises&nbsp;here.</p>
+<p>When we talk about the scope of a variable, we actually talk about the scope of its&nbsp;declaration:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img03.png"></p>
+<p>In the picture above, the vertical lines show the scope of the declared variables, the textual region where the declared names <strong>x</strong> and <strong>y</strong> can be used, that is, the text area where they are visible. And as you can see, the scope of <strong>x</strong> and <strong>y</strong> is the whole program, as shown by the vertical&nbsp;lines.</p>
+<p>Pascal programs are said to be <em><strong>lexically scoped</strong></em> (or <em><strong>statically scoped</strong></em>)
+ because you can look at the source code, and without even executing the
+ program, determine purely based on the textual rules which names 
+(references) resolve or refer to which declarations. In Pascal, for 
+example, lexical keywords like <em>program</em> and <em>end</em> demarcate the textual boundaries of a&nbsp;scope:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img04.png"></p>
+<p>Why are scopes&nbsp;useful?</p>
+<ul>
+<li>Every scope creates an isolated name space, which means that 
+variables declared in a scope cannot be accessed from outside 
+of&nbsp;it.</li>
+<li>You can re-use the same name in different scopes and know exactly, 
+just by looking at the program source code, what declaration the name 
+refers to at every point in the&nbsp;program.</li>
+<li>In a nested scope you can re-declare a variable with the same name 
+as in the outer scope, thus effectively hiding the outer declaration, 
+which gives you control over access to different variables from the 
+outer&nbsp;scope.</li>
+</ul>
+<p>In addition to the <em>global scope</em>, Pascal supports nested 
+procedures, and every procedure declaration introduces a new scope, 
+which means that Pascal supports nested&nbsp;scopes.</p>
+<p>When we talk about nested scopes, it’s convenient to talk about scope
+ levels to show their nesting relationships. It’s also convenient to 
+refer to scopes by name. We’ll use both scope levels and scope names 
+when we start our discussion of nested&nbsp;scopes.</p>
+<p><br>
+Let’s take a look at the following sample program and subscript every name in the program to make it&nbsp;clear:</p>
+<ol>
+<li>At what level each variable (symbol) is&nbsp;declared</li>
+<li>To which declaration and at what level a variable name refers&nbsp;to:</li>
+</ol>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img05.png"></p>
+<p>From the picture above we can see several&nbsp;things:</p>
+<ul>
+<li>We have a single scope, the <em>global scope</em>, introduced by the <span class="caps">PROGRAM</span>&nbsp;keyword</li>
+<li><em>Global scope</em> is at level&nbsp;1</li>
+<li>Variables (symbols) <strong>x</strong> and <strong>y</strong> are declared at level 1 (the <em>global scope</em>).</li>
+<li><em>integer</em> built-in type is also declared at level&nbsp;1</li>
+<li>The program name <strong>Main</strong> has a subscript 0. Why is the
+ program’s name at level zero, you might wonder? This is to make it 
+clear that the program’s name is not in the <em>global scope</em> and it’s in some other outer scope, that has level&nbsp;zero.</li>
+<li>The scope of the variables <strong>x</strong> and <strong>y</strong> is the whole program, as shown by the vertical&nbsp;lines</li>
+<li>The <em>scope information table</em> shows for every level in the 
+program the corresponding scope level, scope name, and names declared in
+ the scope. The purpose of the table is to summarize and visually show 
+different information about scopes in a&nbsp;program.</li>
+</ul>
+<p>How do we implement the concept of a scope in code? To represent a scope in code, we’ll need a <em>scoped symbol table</em>. We already know about symbol tables, but what is a <em>scoped symbol table</em>? A <em><strong>scoped symbol table</strong></em> is basically a symbol table with a few modifications, as you’ll see&nbsp;shortly.</p>
+<p>From now on, we’ll use the word <em>scope</em> both to mean the 
+concept of a scope as well as to refer to the scoped symbol table, which
+ is an implementation of the scope in&nbsp;code.</p>
+<p>Even though in our code a scope is represented by an instance of the <em>ScopedSymbolTable</em> class, we’ll use the variable named <em>scope</em> throughout the code for convenience. So when you see a variable <em>scope</em> in the code of our interpreter, you should know that it actually refers to a <em>scoped symbol table</em>.</p>
+<p>Okay, let’s enhance our <em>SymbolTable</em> class by renaming it to <em>ScopedSymbolTable</em> class, adding two new fields <em>scope_level</em> and <em>scope_name</em>, and updating the scoped symbol table’s constructor. And at the same time, let’s update the <em>__str__</em> method to print additional information, namely the <em>scope_level</em> and <em>scope_name</em>. Here is a new version of the symbol table, the <em>ScopedSymbolTable</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ScopedSymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scope_name</span><span class="p">,</span> <span class="n">scope_level</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span> <span class="o">=</span> <span class="n">scope_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope_level</span> <span class="o">=</span> <span class="n">scope_level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_builtins</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_init_builtins</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'REAL'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">h1</span> <span class="o">=</span> <span class="s1">'SCOPE (SCOPED SYMBOL TABLE)'</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">,</span> <span class="n">h1</span><span class="p">,</span> <span class="s1">'='</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">h1</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">header_name</span><span class="p">,</span> <span class="n">header_value</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s1">'Scope name'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">'Scope level'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_level</span><span class="p">),</span>
+        <span class="p">):</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="si">%-15s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">header_name</span><span class="p">,</span> <span class="n">header_value</span><span class="p">))</span>
+        <span class="n">h2</span> <span class="o">=</span> <span class="s1">'Scope (Scoped symbol table) contents'</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">h2</span><span class="p">,</span> <span class="s1">'-'</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">h2</span><span class="p">)])</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">'</span><span class="si">%7s</span><span class="s1">: </span><span class="si">%r</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Insert: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+
+    <span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p><br>
+Let’s also update the semantic analyzer’s code to use the variable <em>scope</em> instead of <em>symtab</em>, and remove the semantic check that was checking source programs for duplicate identifiers from the <em>visit_VarDecl</em> method to reduce the noise in the program&nbsp;output.</p>
+<p>Here is a piece of code that shows how our semantic analyzer instantiates the <em>ScopedSymbolTable</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SemanticAnalyzer</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="o">=</span> <span class="n">ScopedSymbolTable</span><span class="p">(</span><span class="n">scope_name</span><span class="o">=</span><span class="s1">'global'</span><span class="p">,</span> <span class="n">scope_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="o">...</span>
+</pre></div>
+
+
+<p>You can find all the changes in the file <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope01.py">scope01.py</a>. Download the file, run it on the command line, and inspect the output. Here is what I&nbsp;got:</p>
+<div class="highlight"><pre><span></span>$ python scope01.py
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: x
+Lookup: INTEGER
+Insert: y
+Lookup: x
+Lookup: y
+Lookup: x
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+</pre></div>
+
+
+<p>Most of the output should look very familiar to&nbsp;you.</p>
+<p>Now that you know about the concept of scope and how to implement the
+ scope in code by using a scoped symbol table, it’s time we talked about
+ nested scopes and more dramatic modifications to the scoped symbol 
+table than just adding two simple&nbsp;fields.</p>
+<p><br></p>
+<h3 id="procedure-declarations-with-formal-parameters">Procedure declarations with formal&nbsp;parameters</h3>
+<p>Let’s take a look at a sample program in the file <a href="https://github.com/rspivak/lsbasi/blob/master/part14/nestedscopes02.pas">nestedscopes02.pas</a> that contains a procedure&nbsp;declaration:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>The first thing that we notice here is that we have a procedure with a
+ parameter, and we haven’t learned how to handle that yet. Let’s fill 
+that gap by making a quick detour and learning how to handle formal 
+procedure parameters before continuing with&nbsp;scopes.*</p>
+<blockquote>
+<p>*<span class="caps">ASIDE</span>: <em>Formal parameters</em> are parameters that show up in the declaration of a procedure. <em>Arguments</em> (also called <em>actual parameters</em>) are different variables and expressions passed to a procedure in a particular procedure&nbsp;call.</p>
+</blockquote>
+<p>Here is a list of changes we need to make to support procedure declarations with&nbsp;parameters:</p>
+<ol>
+<li>
+<p>Add the <em>Param</em> <span class="caps">AST</span>&nbsp;node</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Param</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var_node</span><span class="p">,</span> <span class="n">type_node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">var_node</span> <span class="o">=</span> <span class="n">var_node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_node</span> <span class="o">=</span> <span class="n">type_node</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>Update the <em>ProcedureDecl</em> node’s constructor to take an additional argument: <em>params</em></p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ProcedureDecl</span><span class="p">(</span><span class="n">AST</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc_name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">block_node</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proc_name</span> <span class="o">=</span> <span class="n">proc_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>  <span class="c1"># a list of Param nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_node</span> <span class="o">=</span> <span class="n">block_node</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>Update the <em>declarations</em> rule to reflect changes in the procedure declaration&nbsp;sub-rule</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">declarations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""declarations : (VAR (variable_declaration SEMI)+)*</span>
+<span class="sd">                    | (PROCEDURE ID (LPAREN formal_parameter_list RPAREN)? SEMI block SEMI)*</span>
+<span class="sd">                    | empty</span>
+<span class="sd">    """</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>Add the <em>formal_parameter_list</em> rule and&nbsp;method</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">formal_parameter_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">""" formal_parameter_list : formal_parameters</span>
+<span class="sd">                              | formal_parameters SEMI formal_parameter_list</span>
+<span class="sd">    """</span>
+</pre></div>
+
+
+</li>
+<li>
+<p>Add the <em>formal_parameters</em> rule and&nbsp;method</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">formal_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">""" formal_parameters : ID (COMMA ID)* COLON type_spec """</span>
+    <span class="n">param_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+</pre></div>
+
+
+</li>
+</ol>
+<p>With the addition of the above methods and rules our parser will be 
+able to parse procedure declarations like these (I’m not showing the 
+body of declared procedures for&nbsp;brevity):</p>
+<div class="highlight"><pre><span></span><span class="k">procedure</span> <span class="nf">Foo</span><span class="o">;</span>
+
+<span class="k">procedure</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+
+<span class="k">procedure</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+
+<span class="k">procedure</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span> <span class="n">c</span> <span class="o">:</span> <span class="kt">REAL</span><span class="p">)</span><span class="o">;</span>
+</pre></div>
+
+
+<p>Let’s generate an <span class="caps">AST</span> for our sample program. Download <a href="https://github.com/rspivak/lsbasi/blob/master/part14/genastdot.py">genastdot.py</a> and run the following command on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python genastdot.py nestedscopes02.pas &gt; ast.dot <span class="o">&amp;&amp;</span> dot -Tpng -o ast.png ast.dot
+</pre></div>
+
+
+<p>Here is a picture of the generated <span class="caps">AST</span>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img06.png"></p>
+<p>You can see now that the <em>ProcedureDecl</em> node in the picture has the <em>Param</em> node as its&nbsp;child.</p>
+<p>You can find the complete changes in the <a href="https://github.com/rspivak/lsbasi/blob/master/part14/spi.py">spi.py</a>
+ file. Spend some time and study the changes. You’ve done similar 
+changes before; they should be pretty easy to understand and you should 
+be able to implement them by&nbsp;yourself.</p>
+<h3 id="procedure-symbols">Procedure&nbsp;symbols</h3>
+<p>While we’re on the topic of procedure declarations, let’s also talk about procedure&nbsp;symbols.</p>
+<p>As with variable declarations, and built-in type declarations, there 
+is a separate category of symbols for procedures. Let’s create a 
+separate symbol class for procedure&nbsp;symbols:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ProcedureSymbol</span><span class="p">(</span><span class="n">Symbol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ProcedureSymbol</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># a list of formal parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">'&lt;{class_name}(name={name}, parameters={params})&gt;'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">class_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+</pre></div>
+
+
+<p>Procedure symbols have a name (it’s a procedure’s name), their 
+category is procedure (it’s encoded in the class name), and the type is <em>None</em> because in Pascal procedures don’t return&nbsp;anything.</p>
+<p>Procedure symbols also carry additional information about procedure 
+declarations, namely they contain information about the procedure’s 
+formal parameters as you can see in the code&nbsp;above.</p>
+<p>With the addition of procedure symbols, our new symbol hierarchy looks like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img07.png"></p>
+<p><br></p>
+<h3 id="nested-scopes">Nested&nbsp;scopes</h3>
+<p>After that quick detour let’s get back to our program and the discussion of nested&nbsp;scopes:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Things are actually getting more interesting here. By declaring a new
+ procedure, we introduce a new scope, and this scope is nested within 
+the <em>global scope</em> introduced by the <em><span class="caps">PROGRAM</span></em> statement, so this is a case where we have nested scopes in a Pascal&nbsp;program.</p>
+<p>The scope of a procedure is the whole body of the procedure. The beginning of the procedure scope is marked by the <em><span class="caps">PROCEDURE</span></em> keyword and the end is marked by the <em><span class="caps">END</span></em> keyword and a&nbsp;semicolon.</p>
+<p>Let’s subscript names in the program and show some additional&nbsp;information:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img08.png">
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img09.png"></p>
+<p>Some observations from the picture&nbsp;above:</p>
+<ul>
+<li>This Pascal program has two scope levels: level 1 and level&nbsp;2</li>
+<li>The <em>nesting relationships</em> diagram visually shows that the scope <em>Alpha</em> is nested within the <em>global scope</em>, hence there are two levels: the <em>global scope</em> at level 1, and the <em>Alpha</em> scope at level&nbsp;2.</li>
+<li>The scope level of the procedure declaration <em>Alpha</em> is one less than the level of the variables declared inside the procedure <em>Alpha</em>. You can see that the scope level of the procedure declaration <em>Alpha</em> is 1 and the scope level of the variables <strong>a</strong> and <strong>y</strong> inside the procedure is&nbsp;2.</li>
+<li>The variable declaration of <strong>y</strong> inside <em>Alpha</em> hides the declaration of <strong>y</strong> in the <em>global scope</em>. You can see the hole in the vertical bar for <strong>y1</strong> (by the way, 1 is a subscript, it’s not part of the variable name, the variable name is just <strong>y</strong>) and you can see that the scope of the <strong>y2</strong> variable declaration is the <em>Alpha</em> procedure’s whole&nbsp;body.</li>
+<li>The scope information table, as you are already aware, shows scope 
+levels, scope names for those levels, and respective names declared in 
+those scopes (at those&nbsp;levels).</li>
+<li>In the picture, you can also see that I omitted showing the scope of the <em>integer</em> and <em>real</em> types (except in the scope information table) because they are always declared at scope level 1, the <em>global scope</em>, so I won’t be subscripting the <em>integer</em> and <em>real</em>
+ types anymore to save visual space, but you will see the types again 
+and again in the contents of the scoped symbol table representing the <em>global scope</em>.</li>
+</ul>
+<p>The next step is to discuss implementation&nbsp;details.</p>
+<p>First, let’s focus on variable and procedure declarations. Then, we’ll discuss variable references and how <em>name resolution</em> works in the presence of nested&nbsp;scopes.</p>
+<p>For our discussion, we’ll use a stripped down version of the program.
+ The following version does not have variable references: it only has 
+variable and procedure&nbsp;declarations:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>You already know how to represent a scope in code with a scoped symbol table. Now we have two scopes: the <em>global scope</em> and the scope introduced by the procedure <em>Alpha</em>. Following our approach we should now have two scoped symbol tables: one for the <em>global scope</em> and one for the <em>Alpha</em>
+ scope. How do we implement that in code? We’ll extend the semantic 
+analyzer to create a separate scoped symbol table for every scope 
+instead of just for the <em>global scope</em>. The scope construction will happen, as usual, when walking the <span class="caps">AST</span>.</p>
+<p>First, we need to decide where in the semantic analyzer we’re going to create our scoped symbol tables. Recall that <em><span class="caps">PROGRAM</span></em> and <em><span class="caps">PROCEDURE</span></em> keywords introduce new scope. In <span class="caps">AST</span>, the corresponding nodes are <em>Program</em> and <em>ProcedureDecl</em>. So we’re going to update our <em>visit_Program</em> method and add the <em>visit_ProcedureDecl</em> method to create scoped symbol tables. Let’s start with the <em>visit_Program</em>&nbsp;method:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'ENTER scope: global'</span><span class="p">)</span>
+    <span class="n">global_scope</span> <span class="o">=</span> <span class="n">ScopedSymbolTable</span><span class="p">(</span>
+        <span class="n">scope_name</span><span class="o">=</span><span class="s1">'global'</span><span class="p">,</span>
+        <span class="n">scope_level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="n">global_scope</span>
+
+    <span class="c1"># visit subtree</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">global_scope</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'LEAVE scope: global'</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The method has quite a few&nbsp;changes:</p>
+<ol>
+<li>When visiting the node in <span class="caps">AST</span>, we first print what scope we’re entering, in this case <em>global</em>.</li>
+<li>We create a separate <em>scoped symbol table</em> to represent the <em>global scope</em>. When we construct an instance of <em>ScopedSymbolTable</em>, we explicitly pass the scope name and scope level arguments to the class&nbsp;constructor.</li>
+<li>We assign the newly created scope to the instance variable <em>current_scope</em>. Other visitor methods that insert and look up symbols in scoped symbol tables will use the <em>current_scope</em>.</li>
+<li>We visit a subtree (block). This is the old&nbsp;part.</li>
+<li>Before leaving the <em>global scope</em> we print the contents of the <em>global scope</em> (scoped symbol&nbsp;table)</li>
+<li>We also print the message that we’re leaving the <em>global&nbsp;scope</em></li>
+</ol>
+<p>Now let’s add the <em>visit_ProcedureDecl</em> method. Here is the complete source code for&nbsp;it:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_ProcedureDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">proc_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">proc_name</span>
+    <span class="n">proc_symbol</span> <span class="o">=</span> <span class="n">ProcedureSymbol</span><span class="p">(</span><span class="n">proc_name</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">proc_symbol</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s1">'ENTER scope: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span>  <span class="n">proc_name</span><span class="p">)</span>
+    <span class="c1"># Scope for parameters and local variables</span>
+    <span class="n">procedure_scope</span> <span class="o">=</span> <span class="n">ScopedSymbolTable</span><span class="p">(</span>
+        <span class="n">scope_name</span><span class="o">=</span><span class="n">proc_name</span><span class="p">,</span>
+        <span class="n">scope_level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="n">procedure_scope</span>
+
+    <span class="c1"># Insert parameters into the procedure scope</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+        <span class="n">param_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">param_name</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">param_name</span><span class="p">,</span> <span class="n">param_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+        <span class="n">proc_symbol</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block_node</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">procedure_scope</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'LEAVE scope: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span>  <span class="n">proc_name</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Let’s go over the contents of the&nbsp;method:</p>
+<ol>
+<li>The first thing that the method does is create a procedure symbol and insert it into the current scope, which is the <em>global scope</em> for our sample&nbsp;program.</li>
+<li>Then the method prints the message about entering the procedure&nbsp;scope.</li>
+<li>Then we create a new scope for the procedure’s parameters and variable&nbsp;declarations.</li>
+<li>We assign the procedure scope to the <em>self.current_scope</em> variable indicating that this is our current scope and all symbol operations (<em>insert</em> and <em>lookup</em>) will use the current&nbsp;scope.</li>
+<li>Then we handle procedure formal parameters by inserting them into 
+the current scope and adding them to the procedure&nbsp;symbol.</li>
+<li>Then we visit the rest of the <span class="caps">AST</span> subtree - the body of the&nbsp;procedure.</li>
+<li>And, finally, we print the message about leaving the scope before leaving the node and moving to another <span class="caps">AST</span> node, if&nbsp;any.</li>
+</ol>
+<p>Now, what we need to do is update other semantic analyzer visitor methods to use <em>self.current_scope</em> when inserting and looking up symbols. Let’s do&nbsp;that:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">visit_Var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">var_symbol</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="s2">"Error: Symbol(identifier) not found '</span><span class="si">%s</span><span class="s2">'"</span> <span class="o">%</span> <span class="n">var_name</span>
+        <span class="p">)</span>
+</pre></div>
+
+
+<p>Both the <em>visit_VarDecl</em> and <em>visit_Var</em> will now use the <em>current_scope</em> to insert and/or look up symbols. Specifically, for our sample program, the <em>current_scope</em> can point either to the <em>global scope</em> or the <em>Alpha</em>&nbsp;scope.</p>
+<p>We also need to update the semantic analyzer and set the <em>current_scope</em> to <em>None</em> in the&nbsp;constructor:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SemanticAnalyzer</span><span class="p">(</span><span class="n">NodeVisitor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="bp">None</span>
+</pre></div>
+
+
+<p>Clone the <a href="https://github.com/rspivak/lsbasi">GitHub repository for the article</a>, run <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope02.py">scope02.py</a> (it has all the changes we just discussed), inspect the output, and make sure you understand why every line is&nbsp;generated:</p>
+<div class="highlight"><pre><span></span>$ python scope02.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL
+Insert: x
+Lookup: REAL
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: y
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : Alpha
+Scope level    : <span class="m">2</span>
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: Alpha
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+  Alpha: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>Alpha, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>Some things about the output above that I think are worth&nbsp;mentioning:</p>
+<ol>
+<li>You can see that the two lines <em>Insert: <span class="caps">INTEGER</span></em> and <em>Insert: <span class="caps">REAL</span></em> are repeated twice in the output and the keys <span class="caps">INTEGER</span> and <span class="caps">REAL</span> are present in both scopes (scoped symbol tables): <em>global</em> and <em>Alpha</em>.
+ The reason is that we create a separate scoped symbol table for every 
+scope and the table initializes the built-in type symbols every time we 
+create its instance. We’ll change it later when we discuss nesting 
+relationships and how they are expressed in&nbsp;code.</li>
+<li>See how the line <em>Insert: Alpha</em> is printed before the line <em><span class="caps">ENTER</span> scope: Alpha</em>.
+ This is just a reminder that a name of a procedure is declared at a 
+level that is one less than the level of the variables declared in the 
+procedure&nbsp;itself.</li>
+<li>You can see by inspecting the printed contents of the scoped symbol 
+tables above what declarations they contain. See, for example, that <em>global scope</em> has the <em>Alpha</em> symbol in&nbsp;it.</li>
+<li>From the contents of the <em>global scope</em> you can also see that the procedure symbol for the <em>Alpha</em> procedure also contains the procedure’s formal&nbsp;parameters.</li>
+</ol>
+<p>After we run the program, our scopes in memory would look something like this, just two separate scoped symbol&nbsp;tables:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img10.png"></p>
+<p><br></p>
+<h3 id="scope-tree-chaining-scoped-symbol-tables">Scope tree: Chaining scoped symbol&nbsp;tables</h3>
+<p>Okay, now every scope is represented by a separate scoped symbol 
+table, but how do we represent the nesting relationship between the <em>global scope</em> and the scope <em>Alpha</em> as we showed in the nesting relationship diagram before? In other words, how do we express in code that the scope <em>Alpha</em> is nested within the <em>global scope</em>? The answer is chaining the tables&nbsp;together.</p>
+<p>We’ll chain the scoped symbol tables together by creating a link between them. In a way it’ll be like a tree (we’ll call it a <em>scope tree</em>),
+ just an unusual one, because in this tree a child will be pointing to a
+ parent, and not the other way around. Let’s take a look the following <em>scope tree</em>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img11.png"></p>
+<p>In the <em>scope tree</em> above you can see that the scope <em>Alpha</em> is linked to the <em>global scope</em> by pointing to it. To put it differently, the scope <em>Alpha</em> is pointing to its <em>enclosing scope</em>, which is the <em>global scope</em>. It all means that the scope <em>Alpha</em> is nested within the <em>global scope</em>.</p>
+<p>How do we implement scope chaining/linking? There are two&nbsp;steps:</p>
+<ol>
+<li>We need to update the <em>ScopedSymbolTable</em> class and add a variable <em>enclosing_scope</em> that will hold a pointer to the scope’s enclosing scope. This will be the link between scopes in the picture&nbsp;above.</li>
+<li>We need to update the <em>visit_Program</em> and <em>visit_ProcedureDecl</em> methods to create an actual link to the scope’s enclosing scope using the updated version of the <em>ScopedSymbolTable</em>&nbsp;class.</li>
+</ol>
+<p>Let’s start with updating the <em>ScopedSymbolTable</em> class and adding the <em>enclosing_scope</em> field. Let’s also update the <em>__init__</em> and <em>__str__</em> methods.  The <em>__init__</em> method will be modified to accept a new parameter, <em>enclosing_scope</em>, with the default value set to <em>None</em>. The <em>__str__</em> method will be updated to output the name of the enclosing scope. Here is the complete source code of the updated <em>ScopedSymbolTable</em>&nbsp;class:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ScopedSymbolTable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scope_name</span><span class="p">,</span> <span class="n">scope_level</span><span class="p">,</span> <span class="n">enclosing_scope</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span> <span class="o">=</span> <span class="n">scope_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scope_level</span> <span class="o">=</span> <span class="n">scope_level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span> <span class="o">=</span> <span class="n">enclosing_scope</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_builtins</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_init_builtins</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'INTEGER'</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">BuiltinTypeSymbol</span><span class="p">(</span><span class="s1">'REAL'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">h1</span> <span class="o">=</span> <span class="s1">'SCOPE (SCOPED SYMBOL TABLE)'</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">,</span> <span class="n">h1</span><span class="p">,</span> <span class="s1">'='</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">h1</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">header_name</span><span class="p">,</span> <span class="n">header_value</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s1">'Scope name'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">'Scope level'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_level</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">'Enclosing scope'</span><span class="p">,</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span><span class="o">.</span><span class="n">scope_name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span> <span class="k">else</span> <span class="bp">None</span>
+            <span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="si">%-15s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">header_name</span><span class="p">,</span> <span class="n">header_value</span><span class="p">))</span>
+        <span class="n">h2</span> <span class="o">=</span> <span class="s1">'Scope (Scoped symbol table) contents'</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">h2</span><span class="p">,</span> <span class="s1">'-'</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">h2</span><span class="p">)])</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="p">(</span><span class="s1">'</span><span class="si">%7s</span><span class="s1">: </span><span class="si">%r</span><span class="s1">'</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="fm">__repr__</span> <span class="o">=</span> <span class="fm">__str__</span>
+
+    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symbol</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Insert: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="p">[</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbol</span>
+
+    <span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+</pre></div>
+
+
+<p>Now let’s switch our attention to the <em>visit_Program</em>&nbsp;method:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_Program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'ENTER scope: global'</span><span class="p">)</span>
+    <span class="n">global_scope</span> <span class="o">=</span> <span class="n">ScopedSymbolTable</span><span class="p">(</span>
+        <span class="n">scope_name</span><span class="o">=</span><span class="s1">'global'</span><span class="p">,</span>
+        <span class="n">scope_level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">enclosing_scope</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="p">,</span> <span class="c1"># None</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="n">global_scope</span>
+
+    <span class="c1"># visit subtree</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">global_scope</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">enclosing_scope</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'LEAVE scope: global'</span><span class="p">)</span>
+</pre></div>
+
+
+<p>There are a couple of things here worth mentioning and&nbsp;repeating:</p>
+<ol>
+<li>We explicitly pass the <em>self.current_scope</em> as the <em>enclosing_scope</em> argument when creating a&nbsp;scope</li>
+<li>We assign the newly created global scope to the variable <em>self.current_scope</em></li>
+<li>We restore the variable <em>self.current_scope</em> to its previous value right before leaving the <em>Program</em> node. It’s important to restore the value of the <em>current_scope</em>
+ after we’ve finished processing the node, otherwise the scope tree 
+construction will be broken when we have more than two scopes in our 
+program. We’ll see why&nbsp;shortly.</li>
+</ol>
+<p>And, finally, let’s update the <em>visit_ProcedureDecl</em>&nbsp;method:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_ProcedureDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">proc_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">proc_name</span>
+    <span class="n">proc_symbol</span> <span class="o">=</span> <span class="n">ProcedureSymbol</span><span class="p">(</span><span class="n">proc_name</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">proc_symbol</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s1">'ENTER scope: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span>  <span class="n">proc_name</span><span class="p">)</span>
+    <span class="c1"># Scope for parameters and local variables</span>
+    <span class="n">procedure_scope</span> <span class="o">=</span> <span class="n">ScopedSymbolTable</span><span class="p">(</span>
+        <span class="n">scope_name</span><span class="o">=</span><span class="n">proc_name</span><span class="p">,</span>
+        <span class="n">scope_level</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">scope_level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">enclosing_scope</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="n">procedure_scope</span>
+
+    <span class="c1"># Insert parameters into the procedure scope</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+        <span class="n">param_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">param_name</span> <span class="o">=</span> <span class="n">param</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">param_name</span><span class="p">,</span> <span class="n">param_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+        <span class="n">proc_symbol</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">block_node</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">procedure_scope</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">enclosing_scope</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'LEAVE scope: </span><span class="si">%s</span><span class="s1">'</span> <span class="o">%</span>  <span class="n">proc_name</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Again, the main changes compared to the version in <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope02.py">scope02.py</a>&nbsp;are:</p>
+<ol>
+<li>We explicitly pass the <em>self.current_scope</em> as an <em>enclosing_scope</em> argument when creating a&nbsp;scope.</li>
+<li>We no longer hard code the scope level of a procedure declaration 
+because we can calculate the level automatically based on the scope 
+level of the procedure’s enclosing scope: it’s the enclosing scope’s 
+level plus&nbsp;one.</li>
+<li>We restore the value of the <em>self.current_scope</em> to its previous value (for our sample program the previous value would be the <em>global scope</em>) right before leaving the <em>ProcedureDecl</em>&nbsp;node.</li>
+</ol>
+<p>Okay, let’s see what the contents of the scoped symbol tables look like with the above changes. You can find all the changes in <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope03a.py">scope03a.py</a>. Our sample program&nbsp;is:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Run scope03a.py on the command line and inspect the&nbsp;output:</p>
+<div class="highlight"><pre><span></span>$ python scope03a.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL
+Insert: x
+Lookup: REAL
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: y
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : Alpha
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: Alpha
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Enclosing scope: None
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+  Alpha: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>Alpha, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>You can see in the output above that the <em>global scope</em> doesn’t have an enclosing scope and, the <em>Alpha</em>‘s enclosing scope is the <em>global scope</em>, which is what we would expect, because the <em>Alpha</em> scope is nested within the <em>global scope</em>.</p>
+<p><br>
+Now, as promised, let’s consider why it is important to set and restore the value of the <em>self.current_scope</em> variable. Let’s take a look at the following program, where we have two procedure declarations in the <em>global scope</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaA</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span> <span class="cm">{ AlphaA }</span>
+
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaA }</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaB</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span> <span class="cm">{ AlphaB }</span>
+
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaB }</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>The nesting relationship diagram for the sample program looks like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img12.png"></p>
+<p>An <span class="caps">AST</span> for the program (I left only the nodes that are relevant to this example) is something like&nbsp;this:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img13.png" width="440"></p>
+<p>If we don’t restore the current scope when we leave the <em>Program</em> and <em>ProcedureDecl</em> nodes what is going to happen? Let’s&nbsp;see.</p>
+<p>The way our semantic analyzer walks the tree is depth first, left-to-right, so it will traverse the <em>ProcedureDecl</em> node for <em>AlphaA</em> first and then it will visit the <em>ProcedureDecl</em> node for <em>AlphaB</em>. The problem here is that if we don’t restore the <em>self.current_scope</em> before leaving <em>AlphaA</em> the <em>self.current_scope</em> will be left pointing to <em>AlphaA</em> instead of the <em>global scope</em> and, as a result, the semantic analyzer will create the scope <em>AlphaB</em> at level 3, as if it was nested within the scope <em>AlphaA</em>, which is, of course,&nbsp;incorrect.</p>
+<p>To see the broken behavior when the current scope is not being restored before leaving <em>Program</em> and/or <em>ProcedureDecl</em> nodes, download and run the <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope03b.py">scope03b.py</a> on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python scope03b.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL
+Insert: x
+Lookup: REAL
+Insert: y
+Insert: AlphaA
+ENTER scope: AlphaA
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: y
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : AlphaA
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: AlphaA
+Insert: AlphaB
+ENTER scope: AlphaB
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: b
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : AlphaB
+Scope level    : <span class="m">3</span>
+Enclosing scope: AlphaA
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      b: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'b'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: AlphaB
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Enclosing scope: None
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+ AlphaA: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>AlphaA, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>As you can see, scope tree construction in our semantic analyzer is 
+completely broken in the presence of more than two&nbsp;scopes:</p>
+<ol>
+<li>Instead of two scope levels as shown in the nesting relationships diagram, we have three&nbsp;levels</li>
+<li>The <em>global scope</em> contents doesn’t have <em>AlphaB</em> in it, only <em>AlphaA</em>.</li>
+</ol>
+<p><br>
+To construct a scope tree correctly, we need to follow a really simple&nbsp;procedure:</p>
+<ol>
+<li>When we <span class="caps">ENTER</span> a <em>Program</em> or <em>ProcedureDecl</em> node, we create a new scope and assign it to the <em>self.current_scope</em>.</li>
+<li>When we are about to <span class="caps">LEAVE</span> the <em>Program</em> or <em>ProcedureDecl</em> node, we restore the value of the <em>self.current_scope</em>.</li>
+</ol>
+<p>You can think of the <em>self.current_scope</em> as a stack pointer and a <em>scope tree</em> as a collection of&nbsp;stacks:</p>
+<ol>
+<li>When you visit a <em>Program</em> or <em>ProcedureDecl</em> node, you push a new scope on the stack and adjust the stack pointer <em>self.current_scope</em> to point to the top of stack, which is now the most recently pushed&nbsp;scope.</li>
+<li>When you are about to leave the node, you pop the scope off the 
+stack and you also adjust the stack pointer to point to the previous 
+scope on the stack, which is now the new top of&nbsp;stack.</li>
+</ol>
+<p>To see the correct behavior in the presence of multiple scopes, download and run <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope03c.py">scope03c.py</a> on the command line. Study the output. Make sure you understand what is going&nbsp;on:</p>
+<div class="highlight"><pre><span></span>$ python scope03c.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL
+Insert: x
+Lookup: REAL
+Insert: y
+Insert: AlphaA
+ENTER scope: AlphaA
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: y
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : AlphaA
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: AlphaA
+Insert: AlphaB
+ENTER scope: AlphaB
+Insert: INTEGER
+Insert: REAL
+Lookup: INTEGER
+Insert: a
+Lookup: INTEGER
+Insert: b
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : AlphaB
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      b: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'b'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: AlphaB
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Enclosing scope: None
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+ AlphaA: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>AlphaA, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+ AlphaB: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>AlphaB, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>This is how our scoped symbol tables look like after we’ve run <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope03c.py">scope03c.py</a> and correctly constructed the <em>scope tree</em>:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img14.png"></p>
+<p>Again, as I’ve mentioned above, you can think of the scope tree above as a collection of scope&nbsp;stacks.</p>
+<p>Now let’s continue and talk about how <em>name resolution</em> works when we have nested&nbsp;scopes.</p>
+<p><br></p>
+<h3 id="nested-scopes-and-name-resolution">Nested scopes and name&nbsp;resolution</h3>
+<p>Our focus before was on variable and procedure declarations. Let’s add variable references to the&nbsp;mix.</p>
+<p>Here is a sample program with some variable references in&nbsp;it:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Or visually with some additional information:
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img08.png">
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img09.png"></p>
+<p><br>
+Let’s turn our attention to the assignment statement <strong>x := a + x + y;</strong> Here it is with&nbsp;subscripts:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img15.png"></p>
+<p>We see that <strong>x</strong> resolves to a declaration at level 1, <strong>a</strong> resolves to a declaration at level 2 and <strong>y</strong> also resolves to a declaration at level 2. How does that resolution work? Let’s see&nbsp;how.</p>
+<p><em>Lexically (statically) scoped</em> languages like Pascal follow <strong><em>the most closely nested scope</em></strong>
+ rule when it comes to name resolution. It means that, in every scope, a
+ name refers to its lexically closest declaration. For our assignment 
+statement, let’s go over every variable reference and see how the rule 
+works in&nbsp;practice:</p>
+<ol>
+<li>
+<p>Because our semantic analyzer visits the right-hand side of the assignment first, we’ll start with the variable reference <strong>a</strong> from the arithmetic expression <strong>a + x + y</strong>. We begin our search for <strong>a</strong>‘s declaration in the lexically closest scope, which is the <em>Alpha</em> scope. The <em>Alpha</em> scope contains variable declarations in the <em>Alpha</em> procedure including the procedure’s formal parameters.  We find the declaration of <strong>a</strong> in the <em>Alpha</em> scope: it’s the formal parameter <strong>a</strong> of the <em>Alpha</em> procedure - a variable symbol that has type <strong>integer</strong>. We usually do the search by scanning the source code with our eyes when resolving names (remember, <strong>a2</strong> is not the name of a variable, 2 is the subscript here, the variable name is <strong>a</strong>):</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img16.png"></p>
+</li>
+<li>
+<p>Now onto the variable reference <strong>x</strong> from the arithmetic expression <strong>a + x + y</strong>. Again, first we search for the declaration of <strong>x</strong> in the lexically closest scope. The lexically closest scope is the <em>Alpha</em> scope at level 2. The scope contains declarations in the <em>Alpha</em> procedure including the procedure’s formal parameters. We don’t find <strong>x</strong> at this scope level (in the <em>Alpha</em> scope), so we go up the chain to the <em>global scope</em> and continue our search there. Our search succeeds because the <em>global scope</em> has a variable symbol with the name <strong>x</strong> in&nbsp;it:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img17.png"></p>
+</li>
+<li>
+<p>Now, let’s look at the variable reference <strong>y</strong> from the arithmetic expression  <strong>a + x + y</strong>. We find its declaration in the lexically closest scope, which is the <em>Alpha</em> scope. In the <em>Alpha</em> scope the variable <strong>y</strong> has type <strong>integer</strong> (if there weren’t a declaration for <strong>y</strong> in the <em>Alpha</em> scope we would scan the text and find <strong>y</strong> in the outer/global scope and it would have <strong>real</strong> type in that&nbsp;case):</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img18.png"></p>
+</li>
+<li>
+<p>And, finally, the variable <strong>x</strong> from the left hand side of the assignment statement <strong>x := a + x + y;</strong> It resolves to the same declaration as the variable reference <strong>x</strong> in the arithmetic expression on the right-hand&nbsp;side:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img19.png"></p>
+</li>
+</ol>
+<p>How do we implement that behavior of looking in the current scope, 
+and then looking in the enclosing scope, and so on until we either find 
+the symbol we’re looking for or we’ve reached the top of the scope tree 
+and there are no more scopes left? We simply need to extend the <em>lookup</em> method in the <em>ScopedSymbolTable</em> class to continue its search up the chain in the scope&nbsp;tree:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">. (Scope name: </span><span class="si">%s</span><span class="s1">)'</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span><span class="p">))</span>
+    <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">symbol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+
+    <span class="c1"># recursively go up the chain and lookup the name</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The way the updated <em>lookup</em> method&nbsp;works:</p>
+<ol>
+<li>Search for a symbol by name in the current scope. If the symbol is found, then return&nbsp;it.</li>
+<li>If the symbol is not found, recursively traverse the tree and search
+ for the symbol in the scopes up the chain.
+   You don’t have to do the lookup recursively, you can rewrite it into 
+an iterative form; the important part is to follow the link from a 
+nested scope to its enclosing scope and search for the symbol there and 
+up the tree until either the symbol is found or there are no more scopes
+ left because you’ve reached the top of the scope&nbsp;tree.</li>
+<li>The <em>lookup</em> method also prints the scope name, in 
+parenthesis, where the lookup happens to make it clearer that lookup 
+goes up the chain to search for a symbol, if it can’t find it in the 
+current&nbsp;scope.</li>
+</ol>
+<p>Let’s see what our semantic analyzer outputs for our sample program now that we’ve modified the way the <em>lookup</em> searches the scope tree for a symbol. Download <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope04a.py">scope04a.py</a> and run it on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python scope04a.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: x
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: a
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Lookup: a. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : Alpha
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: Alpha
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Enclosing scope: None
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+  Alpha: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>Alpha, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>Inspect the output above and pay attention to the <em><span class="caps">ENTER</span></em> and <em>Lookup</em> messages.
+A couple of things worth mentioning&nbsp;here:</p>
+<ol>
+<li>
+<p>Notice how the semantic analyzer looks up the <em><span class="caps">INTEGER</span></em> built-in type symbol before inserting the variable symbol <strong>a</strong>. It searches <em><span class="caps">INTEGER</span></em> first in the current scope, <em>Alpha</em>, doesn’t find it, then goes up the tree all the way to the <em>global scope</em>, and finds the symbol&nbsp;there:</p>
+<div class="highlight"><pre><span></span>ENTER scope: Alpha
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: a
+</pre></div>
+
+
+</li>
+<li>
+<p>Notice also how the analyzer resolves variable references from the assignment statement <strong>x :=  a + x + y</strong>:</p>
+<div class="highlight"><pre><span></span>Lookup: a. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+</pre></div>
+
+
+<p>The analyzer starts its search in the current scope and then goes up the tree all the way to the <em>global scope</em>.</p>
+</li>
+</ol>
+<p>Let’s also see what happens when a Pascal program has a variable 
+reference that doesn’t resolve to a variable declaration as in the 
+sample program&nbsp;below:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span> <span class="cm">{ ERROR here! }</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Download <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope04b.py">scope04b.py</a> and run it on the command&nbsp;line:</p>
+<div class="highlight"><pre><span></span>$ python scope04b.py
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: x
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: a
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Lookup: b. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: b. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Error: Symbol<span class="o">(</span>identifier<span class="o">)</span> not found <span class="s1">'b'</span>
+</pre></div>
+
+
+<p>As you can see, the analyzer tried to resolve the variable reference <strong>b</strong> and searched for it in the <em>Alpha</em> scope first, then the <em>global scope</em>, and, not being able to find a symbol with the name <strong>b</strong>, it threw the semantic&nbsp;error.</p>
+<p>Okay great, now we know how to write a semantic analyzer that can 
+analyze a program for semantic errors when the program has 
+nested&nbsp;scopes.</p>
+<p><br></p>
+<h3 id="source-to-source-compiler">Source-to-source&nbsp;compiler</h3>
+<p>Now, onto something completely different. Let’s write a <em>source-to-source compiler</em>!
+Why would we do it? Aren’t we talking about interpreters and nested 
+scopes? Yes, we are, but let me explain why I think it might be a good 
+idea to learn how to write a source-to-source compiler right&nbsp;now.</p>
+<p>First, let’s talk about definitions. What is <em>a source-to-source compiler</em>? For the purpose of this article, let’s define a <strong><em>source-to-source compiler</em></strong>
+ as a compiler that translates a program in some source language into a 
+program in the same (or almost the same) source&nbsp;language.</p>
+<p>So, if you write a translator that takes as an input a Pascal program
+ and outputs a Pascal program, possibly modified, or enhanced, the 
+translator in this case is called a <em>source-to-source compiler</em>.</p>
+<p>A good example of a source-to-source compiler for us to study would 
+be a compiler that takes a Pascal program as an input and outputs a 
+Pascal-like program where every name is subscripted with a corresponding
+ scope level, and, in addition to that, every variable reference also 
+has a type indicator. So we want a source-to-source compiler that would 
+take the following Pascal&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>and turn it into the following Pascal-like&nbsp;program:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main0</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">y1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">procedure</span> <span class="nf">Alpha1</span><span class="p">(</span><span class="n">a2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+   <span class="k">begin</span>
+      <span class="o">&lt;</span><span class="n">x1</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;</span> <span class="o">:=</span> <span class="o">&lt;</span><span class="n">a2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">x1</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">y2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;;</span>
+   <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF Alpha}</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span> <span class="cm">{END OF Main}</span>
+</pre></div>
+
+
+<p>Here is the list of modifications our source-to-source compiler should make to an input Pascal&nbsp;program:</p>
+<ol>
+<li>Every declaration should be printed on a separate line, so if we 
+have multiple declarations in the input Pascal program, the compiled 
+output should have each declaration on a separate line. We can see in 
+the text above, for example, how the line <em>var x, y : real;</em> gets converted into multiple&nbsp;lines.</li>
+<li>Every name should get subscripted with a number corresponding to the scope level of the respective&nbsp;declaration.</li>
+<li>Every variable reference, in addition to being subscripted, should also be printed in the following form: <em>&lt;var_name_with_subscript:type&gt;</em></li>
+<li>The compiler should also add a comment at the end of every block in the form <em>{<span class="caps">END</span> <span class="caps">OF</span> … }</em>,
+ where the ellipses will get substituted either with a program name or 
+procedure name. That will help us identify the textual boundaries of 
+procedures&nbsp;faster.</li>
+</ol>
+<p>As you can see from the generated output above, this source-to-source
+ compiler could be a useful tool for understanding how name resolution 
+works, especially when a program has nested scopes, because the output 
+generated by the compiler would allow us to quickly see to what 
+declaration and in what scope a certain variable reference resolves to. 
+This is good help when learning about symbols, nested scopes, and 
+name&nbsp;resolution.</p>
+<p>How can we implement a source-to-source compiler like that? We have 
+actually covered all the necessary parts to do it. All we need to do now
+ is extend our semantic analyzer a bit to generate the enhanced output. 
+You can see the full source code of the compiler <a href="https://github.com/rspivak/lsbasi/blob/master/part14/src2srccompiler.py">here</a>. It is basically a semantic analyzer on drugs, modified to generate and return strings for certain <span class="caps">AST</span>&nbsp;nodes.</p>
+<p>Download <a href="https://github.com/rspivak/lsbasi/blob/master/part14/src2srccompiler.py">src2srccompiler.py</a>, study it, and experiment with it by passing it different Pascal programs as an&nbsp;input.</p>
+<p>For the following program, for&nbsp;example:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">z</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaA</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span> <span class="cm">{ AlphaA }</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaA }</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaB</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+   <span class="k">begin</span> <span class="cm">{ AlphaB }</span>
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaB }</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>The compiler generates the following&nbsp;output:</p>
+<div class="highlight"><pre><span></span><span class="err">$</span> <span class="n">python</span> <span class="n">src2srccompiler</span><span class="o">.</span><span class="n">py</span> <span class="n">nestedscopes03</span><span class="o">.</span><span class="n">pas</span>
+<span class="k">program</span> <span class="n">Main0</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">y1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">z1</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="k">procedure</span> <span class="nf">AlphaA1</span><span class="p">(</span><span class="n">a2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+   <span class="k">begin</span>
+      <span class="o">&lt;</span><span class="n">x1</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;</span> <span class="o">:=</span> <span class="o">&lt;</span><span class="n">a2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">x1</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">y2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;;</span>
+   <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF AlphaA}</span>
+   <span class="k">procedure</span> <span class="nf">AlphaB1</span><span class="p">(</span><span class="n">a2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">b2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+   <span class="k">begin</span>
+
+   <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF AlphaB}</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span> <span class="cm">{END OF Main}</span>
+</pre></div>
+
+
+<p>Cool beans and congratulations, now you know how to write a basic source-to-source&nbsp;compiler!</p>
+<p>Use it to further your understanding of nested scopes, name resolution, and what you can do when you have an <span class="caps">AST</span> and some extra information about the program in the form of symbol&nbsp;tables.</p>
+<p><br>
+Now that we have a useful tool to subscript our programs for us, let’s 
+take a look at a bigger example of nested scopes that you can find in <a href="https://github.com/rspivak/lsbasi/blob/master/part14/nestedscopes04.pas">nestedscopes04.pas</a>:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">b</span><span class="o">,</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">z</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaA</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">b</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+      <span class="k">procedure</span> <span class="nf">Beta</span><span class="p">(</span><span class="n">c</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+         <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+
+         <span class="k">procedure</span> <span class="nf">Gamma</span><span class="p">(</span><span class="n">c</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+            <span class="k">var</span> <span class="n">x</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+         <span class="k">begin</span> <span class="cm">{ Gamma }</span>
+            <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">+</span> <span class="n">c</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">+</span> <span class="n">z</span><span class="o">;</span>
+         <span class="k">end</span><span class="o">;</span>  <span class="cm">{ Gamma }</span>
+
+      <span class="k">begin</span> <span class="cm">{ Beta }</span>
+
+      <span class="k">end</span><span class="o">;</span>  <span class="cm">{ Beta }</span>
+
+   <span class="k">begin</span> <span class="cm">{ AlphaA }</span>
+
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaA }</span>
+
+   <span class="k">procedure</span> <span class="nf">AlphaB</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">c</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+   <span class="k">begin</span> <span class="cm">{ AlphaB }</span>
+      <span class="n">c</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>  <span class="cm">{ AlphaB }</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>Below you can see the declarations’ scopes, nesting relationships diagram, and scope information&nbsp;table:</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img20.png">
+<img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img21.png"></p>
+<p>Let’s run our source-to-source compiler and inspect the output. The 
+subscripts should match the ones in the scope information table in the 
+picture&nbsp;above:</p>
+<div class="highlight"><pre><span></span><span class="err">$</span> <span class="n">python</span> <span class="n">src2srccompiler</span><span class="o">.</span><span class="n">py</span> <span class="n">nestedscopes04</span><span class="o">.</span><span class="n">pas</span>
+<span class="k">program</span> <span class="n">Main0</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">b1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">y1</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">z1</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+   <span class="k">procedure</span> <span class="nf">AlphaA1</span><span class="p">(</span><span class="n">a2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">b2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+      <span class="k">procedure</span> <span class="nf">Beta2</span><span class="p">(</span><span class="n">c3</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+         <span class="k">var</span> <span class="n">y3</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+         <span class="k">procedure</span> <span class="nf">Gamma3</span><span class="p">(</span><span class="n">c4</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+            <span class="k">var</span> <span class="n">x4</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="o">;</span>
+
+         <span class="k">begin</span>
+            <span class="o">&lt;</span><span class="n">x4</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">:=</span> <span class="o">&lt;</span><span class="n">a2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">b2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">c4</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">x4</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">y3</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">z1</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;;</span>
+         <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF Gamma}</span>
+
+      <span class="k">begin</span>
+
+      <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF Beta}</span>
+
+   <span class="k">begin</span>
+
+   <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF AlphaA}</span>
+   <span class="k">procedure</span> <span class="nf">AlphaB1</span><span class="p">(</span><span class="n">a2</span> <span class="o">:</span> <span class="kt">INTEGER</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">c2</span> <span class="o">:</span> <span class="kt">REAL</span><span class="o">;</span>
+
+   <span class="k">begin</span>
+      <span class="o">&lt;</span><span class="n">c2</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;</span> <span class="o">:=</span> <span class="o">&lt;</span><span class="n">a2</span><span class="o">:</span><span class="kt">INTEGER</span><span class="o">&gt;</span> <span class="o">+</span> <span class="o">&lt;</span><span class="n">b1</span><span class="o">:</span><span class="kt">REAL</span><span class="o">&gt;;</span>
+   <span class="k">end</span><span class="o">;</span> <span class="cm">{END OF AlphaB}</span>
+
+<span class="k">begin</span>
+
+<span class="k">end</span><span class="o">.</span> <span class="cm">{END OF Main}</span>
+</pre></div>
+
+
+<p>Spend some time studying both the pictures and the output of the 
+source-to-source compiler. Make sure you understand the following 
+main&nbsp;points:</p>
+<ul>
+<li>The way the vertical lines are drawn to show the scope of the&nbsp;declarations.</li>
+<li>That a hole in a scope indicates that a variable is re-declared in a nested&nbsp;scope.</li>
+<li>That <em>AlphaA</em> and <em>AlphaB</em> are declared in the global&nbsp;scope.</li>
+<li>That <em>AlphaA</em> and <em>AlphaB</em> declarations introduce new&nbsp;scopes.</li>
+<li>How scopes are nested within each other, and their nesting&nbsp;relationships.</li>
+<li>Why different names, including variable references in assignment 
+statements, are subscripted the way they are.  In other words, how name 
+resolution and specifically the <em>lookup</em> method of chained scoped symbol tables&nbsp;works.</li>
+</ul>
+<p>Also run <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope05.py">the following program</a>:</p>
+<div class="highlight"><pre><span></span>$ python scope05.py nestedscopes04.pas
+</pre></div>
+
+
+<p>and inspect the contents of the chained scoped symbol tables and 
+compare it with what you see in the scope information table in the 
+picture above. And don’t forget about the <a href="https://github.com/rspivak/lsbasi/blob/master/part14/genastdot.py">genastdot.py</a>, which you can use to generate a visual diagram of an <span class="caps">AST</span> to see how procedures are nested within each other in the&nbsp;tree.</p>
+<p><br>
+Before we wrap up our discussion of nested scopes for today, recall that
+ earlier we removed the semantic check that was checking source programs
+ for duplicate identifiers. Let’s put it back. For the check to work in 
+the presence of nested scopes and the new behavior of the <em>lookup</em> method, though, we need to make some changes. First, we need to update the <em>lookup</em> method and add an extra parameter that will allow us to limit our search to the current scope&nbsp;only:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">current_scope_only</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">'Lookup: </span><span class="si">%s</span><span class="s1">. (Scope name: </span><span class="si">%s</span><span class="s1">)'</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope_name</span><span class="p">))</span>
+    <span class="c1"># 'symbol' is either an instance of the Symbol class or None</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">symbol</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">symbol</span>
+
+    <span class="k">if</span> <span class="n">current_scope_only</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="c1"># recursively go up the chain and lookup the name</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">enclosing_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+
+<p>And second, we need to modify the <em>visit_VarDecl</em> method and add the check using our new <em>current_scope_only</em> parameter in the <em>lookup</em>&nbsp;method:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_VarDecl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">type_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">type_symbol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
+
+    <span class="c1"># We have all the information we need to create a variable symbol.</span>
+    <span class="c1"># Create the symbol and insert it into the symbol table.</span>
+    <span class="n">var_name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">var_node</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">var_symbol</span> <span class="o">=</span> <span class="n">VarSymbol</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">type_symbol</span><span class="p">)</span>
+
+    <span class="c1"># Signal an error if the table alrady has a symbol</span>
+    <span class="c1"># with the same name</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="n">current_scope_only</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="s2">"Error: Duplicate identifier '</span><span class="si">%s</span><span class="s2">' found"</span> <span class="o">%</span> <span class="n">var_name</span>
+        <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_scope</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">var_symbol</span><span class="p">)</span>
+</pre></div>
+
+
+<p>If we don’t limit the search for a duplicate identifier to the 
+current scope, the lookup might find a variable symbol with the same 
+name in an outer scope and, as a result, would throw an error, while in 
+reality there was no semantic error to begin&nbsp;with.</p>
+<p>Here is the output from running <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope05.py">scope05.py</a>
+ with a program that doesn’t have duplicate identifier errors. You can 
+notice below that the output has more lines in it, due to our duplicate 
+identifier check that looks up for a duplicate name before inserting a 
+new&nbsp;symbol:</p>
+<div class="highlight"><pre><span></span>$ python scope05.py nestedscopes02.pas
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: x
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: a
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Insert: y
+Lookup: a. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : Alpha
+Scope level    : <span class="m">2</span>
+Enclosing scope: global
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+      a: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+
+
+LEAVE scope: Alpha
+
+
+SCOPE <span class="o">(</span>SCOPED SYMBOL TABLE<span class="o">)</span>
+<span class="o">===========================</span>
+Scope name     : global
+Scope level    : <span class="m">1</span>
+Enclosing scope: None
+Scope <span class="o">(</span>Scoped symbol table<span class="o">)</span> contents
+------------------------------------
+INTEGER: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;
+   REAL: &lt;BuiltinTypeSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      x: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'x'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+      y: &lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'y'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'REAL'</span><span class="o">)</span>&gt;
+  Alpha: &lt;ProcedureSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span>Alpha, <span class="nv">parameters</span><span class="o">=[</span>&lt;VarSymbol<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">'a'</span>, <span class="nv">type</span><span class="o">=</span><span class="s1">'INTEGER'</span><span class="o">)</span>&gt;<span class="o">])</span>&gt;
+
+
+LEAVE scope: global
+</pre></div>
+
+
+<p>Now, let’s take <a href="https://github.com/rspivak/lsbasi/blob/master/part14/scope05.py">scope05.py</a> for another test drive and see how it catches a duplicate identifier semantic&nbsp;error.</p>
+<p>For example, for <a href="https://github.com/rspivak/lsbasi/blob/master/part14/dupiderror.pas">the following erroneous program</a> with a duplicate declaration of <strong><em>a</em></strong> in the <em>Alpha</em>&nbsp;scope:</p>
+<div class="highlight"><pre><span></span><span class="k">program</span> <span class="n">Main</span><span class="o">;</span>
+   <span class="k">var</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="kt">real</span><span class="o">;</span>
+
+   <span class="k">procedure</span> <span class="nf">Alpha</span><span class="p">(</span><span class="n">a</span> <span class="o">:</span> <span class="kt">integer</span><span class="p">)</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">y</span> <span class="o">:</span> <span class="kt">integer</span><span class="o">;</span>
+      <span class="k">var</span> <span class="n">a</span> <span class="o">:</span> <span class="kt">real</span><span class="o">;</span>  <span class="cm">{ ERROR here! }</span>
+   <span class="k">begin</span>
+      <span class="n">x</span> <span class="o">:=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">;</span>
+   <span class="k">end</span><span class="o">;</span>
+
+<span class="k">begin</span> <span class="cm">{ Main }</span>
+
+<span class="k">end</span><span class="o">.</span>  <span class="cm">{ Main }</span>
+</pre></div>
+
+
+<p>the program generates the following&nbsp;output:</p>
+<div class="highlight"><pre><span></span>$ python scope05.py dupiderror.pas
+ENTER scope: global
+Insert: INTEGER
+Insert: REAL
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: x. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: x
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: y
+Insert: Alpha
+ENTER scope: Alpha
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Insert: a
+Lookup: INTEGER. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: INTEGER. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: y. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Insert: y
+Lookup: REAL. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Lookup: REAL. <span class="o">(</span>Scope name: global<span class="o">)</span>
+Lookup: a. <span class="o">(</span>Scope name: Alpha<span class="o">)</span>
+Error: Duplicate identifier <span class="s1">'a'</span> found
+</pre></div>
+
+
+<p>It caught the error as&nbsp;expected.</p>
+<p>On this positive note, let’s wrap up our discussion of scopes, scoped symbol tables, and nested scopes for&nbsp;today.</p>
+<p><br></p>
+<h3 id="summary">Summary</h3>
+<p>We’ve covered a lot of ground. Let’s quickly recap what we learned in this&nbsp;article:</p>
+<ul>
+<li>We learned about <em>scopes</em>, why they are useful, and how to implement them in&nbsp;code.</li>
+<li>We learned about <em>nested scopes</em> and how <em>chained scoped symbol tables</em> are used to implement nested&nbsp;scopes.</li>
+<li>We learned how to code a semantic analyzer that walks an <span class="caps">AST</span>, builds <em>scoped symbols tables</em>, chains them together, and does various semantic&nbsp;checks.</li>
+<li>We learned about <em>name resolution</em> and how the semantic analyzer resolves names to their declarations using <em>chained scoped symbol tables (scopes)</em> and how the <em>lookup</em> method recursively goes up the chain in a <em>scope tree</em> to find a declaration corresponding to a certain&nbsp;name.</li>
+<li>We learned that building a <em>scope tree</em> in the semantic analyzer involves walking an <span class="caps">AST</span>, “pushing” a new scope on top of a scoped symbol table stack when ENTERing a certain <span class="caps">AST</span> node and “popping” the scope off the stack when LEAVing the node, making a <em>scope tree</em> look like a collection of scoped symbol table&nbsp;stacks.</li>
+<li>We learned how to write a <em>source-to-source compiler</em>, which can be a useful tool when learning about nested scopes, scope levels, and name&nbsp;resolution.</li>
+</ul>
+<p><br></p>
+<h3 id="exercises">Exercises</h3>
+<p>Time for exercises, oh&nbsp;yeah!</p>
+<p><img alt="" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/lsbasi_part14_img22.png" width="180"></p>
+<ol>
+<li>
+<p>You’ve seen in the pictures throughout the article that the <em>Main</em> name in a program statement had subscript zero. I also mentioned that the program’s name is not in the <em>global scope</em> and it’s in some other outer scope that has level zero. Extend <a href="https://github.com/rspivak/lsbasi/blob/master/part14/spi.py">spi.py</a> and create a <em>builtins</em> scope, a new scope at level 0, and move the built-in types <span class="caps">INTEGER</span> and <span class="caps">REAL</span> into that scope. For fun and practice, you can also update the code to put the program name into that scope as&nbsp;well.</p>
+</li>
+<li>
+<p>For the source program in <a href="https://github.com/rspivak/lsbasi/blob/master/part14/nestedscopes04.pas">nestedscopes04.pas</a> do the&nbsp;following:</p>
+<ol>
+<li>Write down the source Pascal program on a piece of&nbsp;paper</li>
+<li>Subscript every name in the program indicating the scope level of the declaration the name resolves&nbsp;to.</li>
+<li>Draw vertical lines for every name declaration (variable and 
+procedure) to visually show its scope. Don’t forget about scope holes 
+and their meaning when&nbsp;drawing.</li>
+<li>Write a source-to-source compiler for the program without looking at the example source-to-source compiler in this&nbsp;article.</li>
+<li>Use the original <a href="https://github.com/rspivak/lsbasi/blob/master/part14/src2srccompiler.py">src2srccompiler.py</a> program to verify the output from your compiler and whether you subscripted the names correctly in the exercise&nbsp;(2.2).</li>
+</ol>
+</li>
+<li>
+<p>Modify the source-to-source compiler to add subscripts to the built-in types <span class="caps">INTEGER</span> and <span class="caps">REAL</span></p>
+</li>
+<li>
+<p>Uncomment the following block in the <a href="https://github.com/rspivak/lsbasi/blob/master/part14/spi.py">spi.py</a></p>
+<div class="highlight"><pre><span></span><span class="c1"># interpreter = Interpreter(tree)</span>
+<span class="c1"># result = interpreter.interpret()</span>
+<span class="c1"># print('')</span>
+<span class="c1"># print('Run-time GLOBAL_MEMORY contents:')</span>
+<span class="c1"># for k, v in sorted(interpreter.GLOBAL_MEMORY.items()):</span>
+<span class="c1">#     print('%s = %s' % (k, v))</span>
+</pre></div>
+
+
+<p>Run the interpreter with the <a href="https://github.com/rspivak/lsbasi/blob/master/part10/python/part10.pas">part10.pas</a> file as an&nbsp;input:</p>
+<div class="highlight"><pre><span></span>$ python spi.py part10.pas
+</pre></div>
+
+
+<p>Spot the problems and add the missing methods to the semantic&nbsp;analyzer.</p>
+</li>
+</ol>
+<p><br>
+That’s it for today. In the next article we’ll learn about runtime, call
+ stack, implement procedure calls, and write our first version of a 
+recursive factorial function. Stay tuned and see you&nbsp;soon!</p>
+<p><br>
+If you’re interested, here is a list of books (affiliate links) I referred to most when preparing the&nbsp;article:</p>
+<ol>
+<li>
+<p><a target="_blank" href="https://www.amazon.com/gp/product/193435645X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=193435645X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=5d5ca8c07bff5452ea443d8319e7703d">Language Implementation Patterns: Create Your Own Domain-Specific and General Programming Languages (Pragmatic Programmers)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/ir_005" alt="" style="border:none !important; margin:0px !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a target="_blank" href="https://www.amazon.com/gp/product/012088478X/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=012088478X&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=74578959d7d04bee4050c7bff1b7d02e">Engineering a Compiler, Second Edition</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/ir_003" alt="" style="border:none !important; margin:0px !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a target="_blank" href="https://www.amazon.com/gp/product/0124104096/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0124104096&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=8db1da254b12fe6da1379957dda717fc">Programming Language Pragmatics, Fourth Edition</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/ir" alt="" style="border:none !important; margin:0px !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a target="_blank" href="https://www.amazon.com/gp/product/0321486811/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0321486811&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=31743d76157ef1377153dba78c54e177">Compilers: Principles, Techniques, and Tools (2nd Edition)</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/ir_002" alt="" style="border:none !important; margin:0px !important;" width="1" height="1" border="0"></p>
+</li>
+<li>
+<p><a target="_blank" href="https://www.amazon.com/gp/product/0470177071/ref=as_li_tl?ie=UTF8&amp;camp=1789&amp;creative=9325&amp;creativeASIN=0470177071&amp;linkCode=as2&amp;tag=russblo0b-20&amp;linkId=542d1267e34a529e0f69027af20e27f3">Writing Compilers and Interpreters: A Software Engineering Approach</a><img src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/ir_004" alt="" style="border:none !important; margin:0px !important;" width="1" height="1" border="0"></p>
+</li>
+</ol>
+<p><br>
+</p><p>If you want to get my newest articles in your inbox, then enter your email address below and click "Get Updates!"</p>
+
+<!-- Begin MailChimp Signup Form -->
+<link href="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/classic-081711.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+#mc_embed_signup {
+  background: #f5f5f5;
+  clear: left;
+  font: 18px Helvetica,Arial,sans-serif;
+}
+
+#mc_embed_signup form {
+  text-align: center;
+  padding: 20px 0 10px 3%;
+}
+
+#mc_embed_signup .mc-field-group input {
+  display: inline;
+  width: 40%;
+}
+
+#mc_embed_signup div.response {
+  width: 100%;
+}
+</style>
+<div id="mc_embed_signup">
+  <form action="//ruslanspivak.us4.list-manage.com/subscribe/post?u=7dde30eedc045f4670430c25f&amp;id=6f69f44e03" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate="">
+    <div id="mc_embed_signup_scroll">
+
+      <div class="mc-field-group">
+	<label for="mce-NAME">Enter Your First Name *</label>
+	<input type="text" name="NAME" class="required" id="mce-NAME">
+      </div>
+      <div class="mc-field-group">
+	<label for="mce-EMAIL">Enter Your Best Email *</label>
+	<input type="email" name="EMAIL" class="required email" id="mce-EMAIL">
+      </div>
+      <div id="mce-responses" class="clear">
+	<div class="response" id="mce-error-response" style="display:none"></div>
+	<div class="response" id="mce-success-response" style="display:none"></div>
+      </div>
+      <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+      <div style="position: absolute; left: -5000px;"><input type="text" name="b_7dde30eedc045f4670430c25f_6f69f44e03" tabindex="-1"></div>
+      <div class="clear"><input type="submit" value="Get Updates!" name="subscribe" id="mc-embedded-subscribe" class="button" style="background-color: rgb(63, 146, 236);"></div>
+    </div>
+  </form>
+</div>
+<!-- <script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[1]='NAME';ftypes[1]='text';fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script> -->
+<!--End mc_embed_signup-->
+<p></p>
+<p><br>
+<strong>All articles in this series:</strong>
+
+</p><ul>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part1/">Let's Build A Simple Interpreter. Part 1.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part2/">Let's Build A Simple Interpreter. Part 2.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part3/">Let's Build A Simple Interpreter. Part 3.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part4/">Let's Build A Simple Interpreter. Part 4.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part5/">Let's Build A Simple Interpreter. Part 5.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part6/">Let's Build A Simple Interpreter. Part 6.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part7/">Let's Build A Simple Interpreter. Part 7: Abstract Syntax Trees</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part8/">Let's Build A Simple Interpreter. Part 8.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part9/">Let's Build A Simple Interpreter. Part 9.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part10/">Let's Build A Simple Interpreter. Part 10.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part11/">Let's Build A Simple Interpreter. Part 11.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part12/">Let's Build A Simple Interpreter. Part 12.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part13/">Let's Build A Simple Interpreter. Part 13: Semantic Analysis</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part14/">Let's Build A Simple Interpreter. Part 14: Nested Scopes and a Source-to-Source Compiler</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part15/">Let's Build A Simple Interpreter. Part 15.</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part16/">Let's Build A Simple Interpreter. Part 16: Recognizing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part17/">Let's Build A Simple Interpreter. Part 17: Call Stack and Activation Records</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part18/">Let's Build A Simple Interpreter. Part 18: Executing Procedure Calls</a>
+  </li>
+  <li>
+    <a href="https://ruslanspivak.com/lsbasi-part19/">Let's Build A Simple Interpreter. Part 19: Nested Procedure Calls</a>
+  </li>
+</ul>
+<p></p>
+            </div>
+            <!-- /.entry-content -->
+    <hr>
+    <section class="comments" id="comments">
+        <h2>Comments</h2>
+
+        <div id="disqus_thread"><iframe id="dsq-app4655" name="dsq-app4655" allowtransparency="true" scrolling="no" tabindex="0" title="Disqus" style="width: 1px !important; min-width: 100% !important; border: medium none !important; overflow: hidden !important; height: 10182px !important;" src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/a.html" horizontalscrolling="no" verticalscrolling="no" width="100%" frameborder="0"></iframe></div>
+        <script type="text/javascript">
+            /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+            var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+                    var disqus_identifier = 'lets-build-a-simple-interpreter-part-14-nested-scopes-and-a-source-to-source-compiler';
+                var disqus_url = 'https://ruslanspivak.com/lsbasi-part14/';
+
+            var disqus_config = function () {
+                this.language = "en";
+            };
+
+            /* * * DON'T EDIT BELOW THIS LINE * * */
+            (function () {
+                var dsq = document.createElement('script');
+                dsq.type = 'text/javascript';
+                dsq.async = true;
+                dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by
+            Disqus.</a></noscript>
+        <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+    </section>
+        </article>
+    </section>
+
+        </div>
+        <div class="col-sm-3" id="sidebar">
+            <aside>
+
+<section class="well well-sm">
+    <ul class="list-group list-group-flush">
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Social</span></h4>
+              <ul class="list-group" id="social">
+                <li class="list-group-item"><a href="https://github.com/rspivak/"><i class="fa fa-github-square fa-lg"></i> github</a></li>
+                <li class="list-group-item"><a href="https://twitter.com/rspivak"><i class="fa fa-twitter-square fa-lg"></i> twitter</a></li>
+                <li class="list-group-item"><a href="https://linkedin.com/in/ruslanspivak/"><i class="fa fa-linkedin-square fa-lg"></i> linkedin</a></li>
+              </ul>
+            </li>
+
+            <li class="list-group-item"><h4><i class="fa fa-home fa-lg"></i><span class="icon-label">Popular posts</span></h4>
+                <ul class="list-group" id="popularposts">
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part1/">
+                            Let's Build A Web Server. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part1/">
+                            Let's Build A Simple Interpreter. Part 1.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part2/">
+                            Let's Build A Web Server. Part 2.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbaws-part3/">
+                            Let's Build A Web Server. Part 3.
+                        </a>
+                    </li>
+                    <li class="list-group-item" style="font-size: 15px; word-break: normal;">
+                        <a href="https://ruslanspivak.com/lsbasi-part2/">
+                            Let's Build A Simple Interpreter. Part 2.
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="list-group-item">
+              <h4>
+                <span>Disclaimer</span>
+              </h4>
+              <p id="disclaimer-text"> Some of the links on this site
+              have my Amazon referral id, which provides me with a small
+              commission for each sale. Thank you for your support.
+              </p>
+            </li>
+
+
+
+    </ul>
+</section>
+            </aside>
+        </div>
+    </div>
+</div>
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">© 2020 Ruslan Spivak
+            <!-- &middot; Powered by <a href="https://github.com/DandyDev/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>, -->
+            <!-- <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>, -->
+            <!-- <a href="http://getbootstrap.com" target="_blank">Bootstrap</a> -->
+            <!-- -->
+         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/jquery.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/bootstrap.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="Let%E2%80%99s%20Build%20A%20Simple%20Interpreter.%20Part%2014%20Nested%20Scopes%20and%20a%20Source-to-Source%C2%A0Compiler.%20-%20Ruslan's%20Blog_files/respond.js"></script>
+
+    <!-- Disqus -->
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'ruslanspivak'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function () {
+            var s = document.createElement('script');
+            s.async = true;
+            s.type = 'text/javascript';
+            s.src = '//' + disqus_shortname + '.disqus.com/count.js';
+            (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+        }());
+    </script>
+    <!-- End Disqus Code -->
+    <!-- Google Analytics Universal -->
+    <script type="text/javascript">
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-2572871-3', 'auto');
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics Universal Code -->
+
+
+<iframe style="display: none;"></iframe></body></html>
