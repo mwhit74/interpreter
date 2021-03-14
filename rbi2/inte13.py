@@ -570,7 +570,7 @@ class SymbolTable(object):
     __repr__ = __str__
 
 
-class SymanticAnalyzer(NodeVisitor):
+class SemanticAnalyzer(NodeVisitor):
 
     def __init__(self, ast):
         self.ast = ast
@@ -613,12 +613,12 @@ class SymanticAnalyzer(NodeVisitor):
             self.visit(statement)
 
     def visit_Assign(self, node):
-        self.visit(node.left)
         self.visit(node.right)
+        self.visit(node.left)
 
     def visit_BinOp(self, node):
-        self.visit(node.left)
         self.visit(node.right)
+        self.visit(node.left)
 
     def visit_UnaryOp(self, node):
         self.visit(node.factor)
@@ -729,7 +729,7 @@ def main():
     visual_ast = VisualAST(ast)
     visual_ast.build_ast()
 
-    analyzer = SymanticAnalyzer(ast)
+    analyzer = SemanticAnalyzer(ast)
     analyzer.analyze()
     print(analyzer.symtab)
 
