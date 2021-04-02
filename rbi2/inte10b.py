@@ -317,6 +317,10 @@ class Parser(object):
             self.check_token_type(SEMI)
             statements.append(self.statement())
 
+        #forgot to add this check
+        if self.cur_token == ID:
+            self.error()
+
         return statements
 
     def statement(self):
