@@ -577,7 +577,7 @@ class VarSymbol(Symbol):
         super().__init__(name, type)
 
     def __str__(self):
-        return f'<{self.__class__.__name__}(name={self.name}, type={self.type}>'
+        return f'<{self.__class__.__name__}(name={self.name}, type={self.type})>'
 
     __repr__ = __str__
 
@@ -588,7 +588,7 @@ class ProcedureSymbol(Symbol):
         self.params = params if params is not None else []
 
     def __str__(self):
-        return f'<{self.__class__.__name__}(name={self.name}, parameters={self.params}>'
+        return f'<{self.__class__.__name__}(name={self.name}, parameters={self.params})>'
 
     __repr__ = __str__
 
