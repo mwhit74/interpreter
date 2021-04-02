@@ -77,7 +77,7 @@ class ScopedSymbolTable(object):
         symbol.scope = self
 
     def lookup(self, name, current_scope_only = False):
-        print(f'Lookup: "{name}". (Scope name: {self.scope_name})')
+        print(f'Lookup: "{name}". (Scope name: {self.name})')
 
         #searches current scope level for variable
         symbol = self._symbols.get(name)
