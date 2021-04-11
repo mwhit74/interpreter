@@ -643,7 +643,7 @@ class Parser(object):
             if token.type == TokenType.INT_REAL:
                 self.check_token_type(TokenType.INT_REAL)
 
-            node = BinOp(node, token, self.expr2())
+            node = BinOp(node, token, self.expr3())
 
         return node
 
@@ -665,8 +665,9 @@ class Parser(object):
             return UnaryOp(token, self.expr3)
         if token.type == TokenType.OPAR:
             self.check_token_type(TokenType.OPAR)
-            return self.expr1()
+            node = self.expr1()
             self.check_token_type(TokenType.CPAR)
+            return node
         if token.type == TokenType.ID:
             return self.variable()
         if token.type in (TokenType.REAL_CONST, TokenType.INT_CONST):
@@ -824,6 +825,7 @@ class Symbol(object):
     def __init__(self, name, scope, type=None):
         self.name = name
         self.type = type
+        self.scope = scope
 
 class BuiltinSymbolType(Symbol):
 
