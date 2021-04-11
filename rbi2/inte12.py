@@ -412,8 +412,9 @@ class Parser(object):
             return Num(token)
         if token.type == OPAR:
             self.check_token_type(OPAR)
-            return self.expr1()
+            node = self.expr1()
             self.check_token_type(CPAR)
+            return node
         else:
             return self.variable()
 

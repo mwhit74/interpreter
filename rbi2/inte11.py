@@ -388,8 +388,9 @@ class Parser(object):
             return UnaryOp(token, self.expr3())
         if token.type == OPAR:
             self.check_token_type(OPAR)
-            return self.expr1()
+            node = self.expr1()
             self.check_token_type(CPAR)
+            return node
         if token.type == REAL_CONST:
             num = Num(token)
             self.check_token_type(REAL_CONST)
