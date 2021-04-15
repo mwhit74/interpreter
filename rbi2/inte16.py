@@ -1,6 +1,11 @@
 """
 Lesson 16
 
+Recognizing procedure calls. 
+
+Updated parser and semantic analyzer to recognize a procedure call. This
+type of procedure call does not return anything. 
+
 """
 
 from collections import namedtuple
@@ -57,9 +62,9 @@ class TokenType(Enum):
     REAL_TYPE   = 'REAL'
     PROCEDURE   = 'PROCEDURE'
     VAR         = 'VAR'
+    INT_DIV     = 'DIV'
     BEGIN       = 'BEGIN'
     END         = 'END'
-    INT_DIV     = 'DIV'
 
     ID          = 'ID'
     INT_CONST   = 'INT_CONST'
