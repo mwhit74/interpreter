@@ -465,7 +465,7 @@ class Parser(object):
             statements.append(self.statement())
 
         if self.cur_token.type == TokenType.ID:
-            self.error()
+            self.error(ErrorCode.UNEXPECTED_TOKEN, self.cur_token)
 
         return statements
 
@@ -924,9 +924,9 @@ class SemanticAnalyzer(NodeVisitor):
         self.visit(node.left)
 
     def visit_Variable(self, node):
-        var_node = self.cur_scope.lookup(node.value)
-        if var_node == None:
-            self.error(ErrorCode.ID_NOT_FOUND, node.token)
+        var_symbol = self.cur_scope.lookup(node.value)
+        if var_symbol == None:
+            self.error(ErrorCode.ID_NOT_FOUND, node.var_node.token)
 
     def visit_Num(self, node):
         pass
