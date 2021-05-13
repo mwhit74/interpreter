@@ -211,7 +211,7 @@ class Lexer(object):
             try:
                 token_type = TokenType(self.cur_char)        
             except ValueError as e:
-                raise self.error(ErrorType.UNEXPECTED_TOKEN, token)
+                self.error()
             else:
                 token = Token(
                             token_type.value,
@@ -270,7 +270,8 @@ class ProcCall(AST):
 
     def __init__(self, name, apl, token):
         self.name = name
-        self.apl = apl #actual parameter list
+        self.apl = apl
+        self.token = token
 
 class VarDecl(AST):
 
@@ -419,6 +420,7 @@ class Parser(object):
 
         name = self.cur_token.value
         self.check_token_type(TokenType.ID)
+        fpl = []
 
         if self.cur_token.type == TokenType.OPAR:
             self.check_token_type(TokenType.OPAR)
@@ -532,18 +534,16 @@ class Parser(object):
         token = self.cur_token
         self.check_token_type(TokenType.ID)
 
+        apl = []
         self.check_token_type(TokenType.OPAR)
 
-        if self.cur_token.type in (TokenType.ID, TokenType.REAL_CONST, TokenType.INT_CONST):
+        if (self.cur_token.type in 
+                (TokenType.ID, TokenType.REAL_CONST, TokenType.INT_CONST)):
             apl = self.actual_param_list()
 
         self.check_token_type(TokenType.CPAR)
 
         return ProcCall(name, apl, token)
-
-    def empty(self):
-        """empty: """
-        return Empty()
 
     def actual_param_list(self):
         """actual_param_list: expr 1 (COMMA expr1)*"""
@@ -628,6 +628,10 @@ class Parser(object):
             self.check_token_type(TokenType.REAL_CONST)
 
         return Num(token)
+
+    def empty(self):
+        """empty: """
+        return Empty()
 
     def parse(self):
         root = self.program()

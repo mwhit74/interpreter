@@ -567,6 +567,7 @@ class Parser(object):
         self.check_token_type(TokenType.PROCEDURE)
         name = self.cur_token.value
         self.check_token_type(TokenType.ID)
+        fpl = []
 
         if self.cur_token.type == TokenType.OPAR:
             self.check_token_type(TokenType.OPAR)
